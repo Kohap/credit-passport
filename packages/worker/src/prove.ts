@@ -201,38 +201,50 @@ async function main(): Promise<void> {
   }
 
   const iface = new Interface(ASC_ABI);
-  const siblings = proof.merkleProof.siblings.map((s) => {
+  const chainKeyOut = Number(proof.chainKey ?? chainKey);
+  const headerNumber = Number(proof.headerNumber);
+  const siblingsTuples = proof.merkleProof.siblings.map((s) => {
     const entry = s as MerkleSibling & { hash?: string; isLeft?: boolean };
     return [entry.hash, Boolean(entry.isLeft)] as [string, boolean];
   });
   const calldata = iface.encodeFunctionData("proveRepayment", [
-    Number(proof.chainKey ?? chainKey),
-    Number(proof.headerNumber),
+    chainKeyOut,
+    headerNumber,
     proof.txBytes,
     proof.merkleProof.root,
-    siblings,
+    siblingsTuples,
     proof.continuityProof.lowerEndpointDigest,
     proof.continuityProof.roots,
     claim,
   ]);
 
-  const payload = {
+  /** Canonical proof document — same flat shape Desk paste expects (ADR-0003). */
+  const proofDocument = {
     sepoliaTxHash: txHash,
     sepoliaBlockNumber: blockNumber,
-    chainKey: Number(proof.chainKey ?? chainKey),
-    headerNumber: Number(proof.headerNumber),
+    chainKey: chainKeyOut,
+    headerNumber,
+    txIndex: Number(proof.txIndex ?? 0),
+    merkleRoot: proof.merkleProof.root,
+    siblings: proof.merkleProof.siblings.map((s) => ({
+      hash: s.hash,
+      isLeft: Boolean(s.isLeft),
+    })),
+    lowerEndpointDigest: proof.continuityProof.lowerEndpointDigest,
+    continuityRoots: proof.continuityProof.roots,
+    txBytes: proof.txBytes,
+    cached: Boolean(proof.cached),
     claimBorrower: claim,
-    proof,
-    proveRepaymentCalldata: calldata,
     asc,
+    proveRepaymentCalldata: calldata,
   };
 
-  console.log(JSON.stringify(payload, null, 2));
+  console.log(JSON.stringify(proofDocument, null, 2));
 
   if (jsonOut) {
     const fs = await import("node:fs/promises");
-    await fs.writeFile(jsonOut, JSON.stringify(payload, null, 2));
-    console.log(`Wrote ${jsonOut}`);
+    await fs.writeFile(jsonOut, JSON.stringify(proofDocument, null, 2));
+    console.log(`Wrote flat proof document ${jsonOut}`);
   }
 
   if (submit) {
@@ -251,8 +263,8 @@ Sepolia LoanRepaid tx:  ${SEPOLIA_EXPLORER}/tx/${txHash}
 Creditcoin proveRepayment tx: ${CREDITCOIN_EXPLORER}/tx/${tx.hash}
 ASC: ${asc}
 claimBorrower: ${claim}
-chainKey: ${payload.chainKey}
-headerNumber: ${payload.headerNumber}
+chainKey: ${proofDocument.chainKey}
+headerNumber: ${proofDocument.headerNumber}
 =================================
 `);
     } catch (err) {

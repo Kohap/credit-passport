@@ -30,6 +30,7 @@ import {
   passportAscAbi,
   passportNftAbi,
 } from "@/lib/abi";
+import { buildProof, type ProofPayload } from "@/lib/buildProof";
 
 type ProvePhase =
   | "idle"
@@ -39,19 +40,6 @@ type ProvePhase =
   | "submitting"
   | "verified"
   | "error";
-
-type ProofPayload = {
-  sepoliaTxHash: string;
-  sepoliaBlockNumber: number;
-  chainKey: number;
-  headerNumber: number;
-  txIndex: number;
-  merkleRoot: Hex;
-  siblings: { hash: Hex; isLeft: boolean }[];
-  lowerEndpointDigest: Hex;
-  continuityRoots: Hex[];
-  txBytes: Hex;
-};
 
 function isConfigured(addr: string): boolean {
   return /^0x[0-9a-fA-F]{40}$/.test(addr) && !/^0x0+$/.test(addr.slice(2));
@@ -215,23 +203,12 @@ export function Desk() {
       setPhase("waiting_source");
       setStatus("Confirming Sepolia repayment…");
       setPhase("waiting_attestation");
-      setStatus("Waiting for Attestcoin height attestation (~15s lag after source block)…");
+      setStatus(
+        "Waiting for Attestcoin height attestation (~15s+ lag; can take minutes)…",
+      );
       setPhase("generating_proof");
 
-      const res = await fetch("/api/prove", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ txHash: repayTx }),
-      });
-      const body: unknown = await res.json();
-      if (!res.ok) {
-        const err =
-          typeof body === "object" && body && "error" in body
-            ? String((body as { error: string }).error)
-            : res.statusText;
-        throw new Error(err);
-      }
-      const payload = body as ProofPayload;
+      const payload = await buildProof(repayTx, (msg) => setStatus(msg));
       setProof(payload);
 
       setPhase("submitting");

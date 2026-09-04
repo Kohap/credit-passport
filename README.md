@@ -60,7 +60,7 @@ npm run prove -- 0xSEPOLIA_TX_HASH --json-out proof.json
 npm run prove -- 0xSEPOLIA_TX_HASH --submit --claim 0xYourAddress
 ```
 
-Or paste `proof.json` into the Desk “CORS fallback” panel and submit from the UI.
+`--json-out` writes a **flat** proof document (`merkleRoot`, `siblings`, `txBytes`, …) that Desk paste accepts directly (ADR-0003). Paste `proof.json` into the CORS fallback panel.
 
 ## Reproduce one proof
 

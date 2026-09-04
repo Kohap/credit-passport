@@ -23,11 +23,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+          # cache only when lockfile present (committed in same PR/commit)
           cache: npm
           cache-dependency-path: package-lock.json
 
       - name: Install
-        run: npm ci
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            echo "WARN: package-lock.json missing — falling back to npm install"
+            npm install
+          fi
 
       - name: Static export (Next.js → apps/web/out)
         run: npm run build:pages
@@ -35,7 +42,7 @@ jobs:
           GITHUB_PAGES: "true"
 
       - name: Ensure .nojekyll in export
-        run: touch apps/web/out/.nojekyll
+        run: touch apps/web/out/.nojekyll && ls -la apps/web/out | head
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

@@ -112,6 +112,7 @@ No Chainlink, Pyth, or centralized backend decides the repayment.
 ```
 packages/contracts-sepolia/     MockUSD + MockMarket (LoanRepaid)
 packages/contracts-creditcoin/  ASC + score + line + soulbound NFT
+packages/worker/                prove.ts CLI (@gluwa/usc-sdk)
 apps/web/                       Next.js dual-chain desk
 scripts/fund-creditline.sh     mint/transfer mUSD → CreditLine
 scripts/demo-e2e.sh             full faucet → prove path

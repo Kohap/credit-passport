@@ -1,6 +1,6 @@
 {
   "name": "Credit Passport",
-  "install": "cd apps/web && npm install",
+  "install": "cd apps/web && npm ci",
   "terminals": [
     {
       "name": "web",

@@ -240,7 +240,7 @@ export function Desk() {
     setVerified({
       score: score !== undefined ? score.toString() : "refresh page / wait",
       cap: cap !== undefined ? formatEther(cap) : "refresh",
-      tokenId: tokenId.toString() : "refresh",
+      tokenId: tokenId !== undefined ? tokenId.toString() : "refresh",
     });
     setStatus(`Verified on Creditcoin. Tx ${hash}`);
     setCorsFallback(false);

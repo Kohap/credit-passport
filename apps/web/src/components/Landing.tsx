@@ -14,6 +14,7 @@ export function Landing() {
       </header>
 
       <section className="landing-hero" aria-labelledby="landing-brand">
+        <div className="landing-hero-visual" aria-hidden="true" />
         <div className="landing-hero-stage">
           <p className="landing-brand" id="landing-brand">
             Credit Passport
@@ -61,14 +62,17 @@ export function Landing() {
         </section>
 
         <section className="landing-close" aria-labelledby="close-title">
-          <h2 id="close-title">Run the Attestcoin loop</h2>
-          <p>
-            One MetaMask account on Sepolia and Creditcoin CC3. About ninety seconds once
-            attestation is ready.
-          </p>
-          <Link href="/app" className="btn btn-primary landing-cta">
-            Open Desk
-          </Link>
+          <div className="landing-close-visual" aria-hidden="true" />
+          <div className="landing-close-copy">
+            <h2 id="close-title">Run the Attestcoin loop</h2>
+            <p>
+              One MetaMask account on Sepolia and Creditcoin CC3. About ninety seconds once
+              attestation is ready.
+            </p>
+            <Link href="/app" className="btn btn-primary landing-cta">
+              Open Desk
+            </Link>
+          </div>
         </section>
       </main>
 

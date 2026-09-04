@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",
+    "build:pages": "GITHUB_PAGES=true next build",
     "start": "next start -p 3000",
     "typecheck": "tsc --noEmit"
   },
@@ -12,8 +13,8 @@
     "@tanstack/react-query": "^5.69.0",
     "@wagmi/connectors": "^5.7.12",
     "next": "^15.2.3",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
     "viem": "^2.23.15",
     "wagmi": "^2.14.15",
     "zod": "^3.24.2",

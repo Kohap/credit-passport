@@ -16,10 +16,15 @@
     "prove": "npm run prove --workspace=packages/worker --",
     "deploy:testnets": "bash scripts/deploy-all.sh",
     "dev:web": "npm run dev --workspace=apps/web",
-    "build:web": "npm run build --workspace=apps/web"
+    "build:web": "npm run build --workspace=apps/web",
+    "build:pages": "GITHUB_PAGES=true npm run build --workspace=apps/web"
   },
   "engines": {
     "node": ">=20"
+  },
+  "overrides": {
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
   },
   "license": "MIT"
 }

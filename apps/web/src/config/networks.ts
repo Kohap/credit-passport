@@ -7,6 +7,8 @@ export const SEPOLIA_EXPLORER = "https://sepolia.etherscan.io";
 export const CREDITCOIN_EXPLORER = "https://creditcoin-testnet.blockscout.com";
 export const ATTESTOR_DASHBOARD = "https://dashboard.cc3-testnet.creditcoin.network";
 export const PROOF_BUILDER_URL = "https://prover.cc3-testnet.creditcoin.network";
+/** Public demo URL (GitHub Pages). */
+export const PAGES_URL = "https://kohap.github.io/credit-passport/";
 
 /** Live CC3 / Sepolia demo deploys — overridable via NEXT_PUBLIC_* env. */
 export const addresses = {

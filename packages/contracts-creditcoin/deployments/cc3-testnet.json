@@ -1,0 +1,13 @@
+{
+  "network": "creditcoin-cc3-testnet",
+  "chainId": 102031,
+  "sepoliaChainKey": 1,
+  "MockUSD": null,
+  "CreditScore": null,
+  "CreditLine": null,
+  "PassportNFT": null,
+  "CreditPassportASC": null,
+  "trustedSepoliaMockMarket": null,
+  "deployedAt": null,
+  "notes": "Fill after forge script DeployCreditcoin"
+}

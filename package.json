@@ -1,0 +1,24 @@
+{
+  "name": "credit-passport",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Prove Sepolia repayments on Creditcoin via Attestcoin — mint a soulbound Credit Passport",
+  "workspaces": [
+    "packages/worker",
+    "apps/web"
+  ],
+  "scripts": {
+    "build:contracts:sepolia": "cd packages/contracts-sepolia && forge build",
+    "build:contracts:creditcoin": "cd packages/contracts-creditcoin && forge build",
+    "test:contracts:sepolia": "cd packages/contracts-sepolia && forge test -vv",
+    "test:contracts:creditcoin": "cd packages/contracts-creditcoin && forge test -vv",
+    "test:contracts": "npm run test:contracts:sepolia && npm run test:contracts:creditcoin",
+    "prove": "npm run prove --workspace=packages/worker --",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "build:web": "npm run build --workspace=apps/web"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}

@@ -7,8 +7,11 @@ export const SEPOLIA_EXPLORER = "https://sepolia.etherscan.io";
 export const CREDITCOIN_EXPLORER = "https://creditcoin-testnet.blockscout.com";
 export const ATTESTOR_DASHBOARD = "https://dashboard.cc3-testnet.creditcoin.network";
 export const PROOF_BUILDER_URL = "https://prover.cc3-testnet.creditcoin.network";
+export const PROOF_BUILDER_URL_FALLBACK =
+  "https://proof-gen-api.cc3-testnet.creditcoin.network";
 /** Public demo URL (GitHub Pages). */
 export const PAGES_URL = "https://kohap.github.io/credit-passport/";
+export const ASC_DEFAULT = "0xc5c9B5A4842B20D945aAD6824A58Afdbb78fecbb";
 
 /** Live CC3 / Sepolia demo deploys — overridable via NEXT_PUBLIC_* env. */
 export const addresses = {

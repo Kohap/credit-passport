@@ -168,7 +168,10 @@ export async function buildProof(
   }
 }
 
-/** Accept worker CLI JSON (`--json-out`) or a flat ProofPayload. */
+/**
+ * Parse the canonical flat proof document (worker `--json-out` / Desk paste).
+ * Thin fallback: older nested `{ proof: { merkleProof, continuityProof } }` CLI dumps.
+ */
 export function parsePastableProof(raw: string, fallbackTx?: string): ProofPayload {
   const parsed: unknown = JSON.parse(raw);
   if (!parsed || typeof parsed !== "object") {
@@ -176,7 +179,24 @@ export function parsePastableProof(raw: string, fallbackTx?: string): ProofPaylo
   }
   const obj = parsed as Record<string, unknown>;
 
-  // Worker CLI shape: { sepoliaTxHash, sepoliaBlockNumber, chainKey, headerNumber, proof: {...} }
+  // Canonical flat document (ADR-0003)
+  if (typeof obj.merkleRoot === "string" && typeof obj.txBytes === "string") {
+    return {
+      sepoliaTxHash: String(obj.sepoliaTxHash ?? fallbackTx ?? ""),
+      sepoliaBlockNumber: Number(obj.sepoliaBlockNumber ?? 0),
+      chainKey: Number(obj.chainKey ?? 1),
+      headerNumber: Number(obj.headerNumber),
+      txIndex: Number(obj.txIndex ?? 0),
+      merkleRoot: obj.merkleRoot as Hex,
+      siblings: (obj.siblings as ProofPayload["siblings"]) ?? [],
+      lowerEndpointDigest: obj.lowerEndpointDigest as Hex,
+      continuityRoots: (obj.continuityRoots as Hex[]) ?? [],
+      txBytes: obj.txBytes as Hex,
+      cached: Boolean(obj.cached),
+    };
+  }
+
+  // Legacy nested worker dump — remove once all proof.json files are flat
   if (obj.proof && typeof obj.proof === "object") {
     const proof = obj.proof as Record<string, unknown>;
     const merkle = proof.merkleProof as {
@@ -187,6 +207,9 @@ export function parsePastableProof(raw: string, fallbackTx?: string): ProofPaylo
       lowerEndpointDigest: string;
       roots: string[];
     };
+    if (!merkle?.root || !continuity?.lowerEndpointDigest || !proof.txBytes) {
+      throw new Error("legacy nested proof missing merkleProof / continuityProof / txBytes");
+    }
     return {
       sepoliaTxHash: String(obj.sepoliaTxHash ?? fallbackTx ?? ""),
       sepoliaBlockNumber: Number(obj.sepoliaBlockNumber ?? 0),
@@ -205,18 +228,7 @@ export function parsePastableProof(raw: string, fallbackTx?: string): ProofPaylo
     };
   }
 
-  // Flat ProofPayload shape
-  return {
-    sepoliaTxHash: String(obj.sepoliaTxHash ?? fallbackTx ?? ""),
-    sepoliaBlockNumber: Number(obj.sepoliaBlockNumber ?? 0),
-    chainKey: Number(obj.chainKey ?? 1),
-    headerNumber: Number(obj.headerNumber),
-    txIndex: Number(obj.txIndex ?? 0),
-    merkleRoot: obj.merkleRoot as Hex,
-    siblings: (obj.siblings as ProofPayload["siblings"]) ?? [],
-    lowerEndpointDigest: obj.lowerEndpointDigest as Hex,
-    continuityRoots: (obj.continuityRoots as Hex[]) ?? [],
-    txBytes: obj.txBytes as Hex,
-    cached: Boolean(obj.cached),
-  };
+  throw new Error(
+    "Not a canonical proof document (need merkleRoot + txBytes). Re-run: npm run prove -- <tx> --json-out proof.json",
+  );
 }

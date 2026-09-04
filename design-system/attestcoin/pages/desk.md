@@ -1,6 +1,6 @@
 # Desk page override
 
-**Route:** `/` (`apps/web` Desk)
+**Route:** `/app` (`apps/web` Desk) — landing lives at `/`
 
 ## Purpose
 

@@ -122,9 +122,21 @@ npm run prove -- 0xSEPOLIA_TX_HASH --submit --claim 0xYourAddress
 
 ## Web UI
 
+Local:
+
 ```bash
 npm run dev:web
 # http://localhost:3000
+```
+
+**GitHub Pages (static):** https://kohap.github.io/credit-passport/
+
+Deploys automatically on every push to `main` (Actions → Pages). First time: repo **Settings → Pages → Source: GitHub Actions**.
+
+Proof building runs in the browser (Pages has no Node API). If the proof builder blocks CORS, use the worker CLI instead:
+
+```bash
+npm run prove -- 0xSEPOLIA_TX_HASH --json-out /tmp/proof.json
 ```
 
 Demo path (&lt; 90s): connect → Add networks → Faucet → Open loan → Repay → Prove on Creditcoin → see score / cap / NFT.

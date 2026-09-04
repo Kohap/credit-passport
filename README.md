@@ -10,7 +10,7 @@ Repayment lives on Sepolia; credit decisions live on Creditcoin. Attestcoin is t
 
 ## Live app (convenience) vs proof (source of truth)
 
-- **Desk (primary):** [https://web-mauve-five-21.vercel.app/](https://web-mauve-five-21.vercel.app/) — use this for judges once **Connect wallet** loads.
+- **Desk (primary):** [https://web-mauve-five-21.vercel.app/app](https://web-mauve-five-21.vercel.app/app) — use this for judges once **Connect wallet** loads. Landing: [https://web-mauve-five-21.vercel.app/](https://web-mauve-five-21.vercel.app/).
 - **GitHub Pages (backup):** https://kohap.github.io/credit-passport/ — only if it serves the Next app, not the README.
 - Local: `npm run dev:web`
 - **Proof of Attestcoin:** `npm run prove -- <sepoliaTx> --submit` (CLI). Browser prove can CORS-fail; CLI is source of truth for the video if needed.
@@ -38,7 +38,7 @@ Demo deployer: [`0x3953A716DA94e51EAFE6F2224379332B0BEEE5EA`](https://creditcoin
 | MockUSD | Creditcoin | [`0x5D695DD7bd61D22731973F32e84c8D797FEed701`](https://creditcoin-testnet.blockscout.com/address/0x5D695DD7bd61D22731973F32e84c8D797FEed701) |
 | CreditScore | Creditcoin | [`0xEd2a52496044771bE1a3583f2d7061da33427a6a`](https://creditcoin-testnet.blockscout.com/address/0xEd2a52496044771bE1a3583f2d7061da33427a6a) |
 | CreditLine | Creditcoin | [`0xFA2f6AD61e9A1c44eD03509f386DE4DDa5ecfa7e`](https://creditcoin-testnet.blockscout.com/address/0xFA2f6AD61e9A1c44eD03509f386DE4DDa5ecfa7e) |
-| PassportNFT | Creditcoin | [`0x3E6CB0dC03e72E57ac91c8D74cF2246079F1B09e`](https://creditcoin-testnet.blockscout.com/address/0x3E6CB0dC03e72E57ac91c8D74cF2246079F1B09e) |
+| PassportNFT | Creditcoin | [`0x3E6CB0dC03e72E57ac91c8D74cF2246079F1B09e`](https://creditcoin-testnet.blockscout.com/address/0xFA2f6AD61e9A1c44eD03509f386DE4DDa5ecfa7e) |
 | CreditPassportASC | Creditcoin | [`0xc5c9B5A4842B20D945aAD6824A58Afdbb78fecbb`](https://creditcoin-testnet.blockscout.com/address/0xc5c9B5A4842B20D945aAD6824A58Afdbb78fecbb) |
 
 JSON: `packages/*/deployments/*.json`. Same hex across chains is a CREATE-address coincidence (matching deployer nonces) — different networks.

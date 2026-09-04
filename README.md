@@ -42,19 +42,21 @@ No Chainlink, Pyth, or centralized “trust me” backend decides the repayment.
 
 ## Deployed addresses
 
-Fill after deploy (also copy into `.env` / `NEXT_PUBLIC_*`):
+Demo deployer: `0x3953A716DA94e51EAFE6F2224379332B0BEEE5EA`
 
 | Contract | Network | Address |
 | --- | --- | --- |
-| MockUSD | Sepolia | _TODO after deploy_ |
-| MockMarket | Sepolia | _TODO after deploy_ |
-| MockUSD | Creditcoin | _TODO after deploy_ |
-| CreditScore | Creditcoin | _TODO after deploy_ |
-| CreditLine | Creditcoin | _TODO after deploy_ |
-| PassportNFT | Creditcoin | _TODO after deploy_ |
-| CreditPassportASC | Creditcoin | _TODO after deploy_ |
+| MockUSD | Sepolia | [`0x5D695DD7bd61D22731973F32e84c8D797FEed701`](https://sepolia.etherscan.io/address/0x5D695DD7bd61D22731973F32e84c8D797FEed701) |
+| MockMarket | Sepolia | [`0xEd2a52496044771bE1a3583f2d7061da33427a6a`](https://sepolia.etherscan.io/address/0xEd2a52496044771bE1a3583f2d7061da33427a6a) |
+| MockUSD | Creditcoin | [`0x5D695DD7bd61D22731973F32e84c8D797FEed701`](https://creditcoin-testnet.blockscout.com/address/0x5D695DD7bd61D22731973F32e84c8D797FEed701) |
+| CreditScore | Creditcoin | [`0xEd2a52496044771bE1a3583f2d7061da33427a6a`](https://creditcoin-testnet.blockscout.com/address/0xEd2a52496044771bE1a3583f2d7061da33427a6a) |
+| CreditLine | Creditcoin | [`0xFA2f6AD61e9A1c44eD03509f386DE4DDa5ecfa7e`](https://creditcoin-testnet.blockscout.com/address/0xFA2f6AD61e9A1c44eD03509f386DE4DDa5ecfa7e) |
+| PassportNFT | Creditcoin | [`0x3E6CB0dC03e72E57ac91c8D74cF2246079F1B09e`](https://creditcoin-testnet.blockscout.com/address/0x3E6CB0dC03e72E57ac91c8D74cF2246079F1B09e) |
+| CreditPassportASC | Creditcoin | [`0xc5c9B5A4842B20D945aAD6824A58Afdbb78fecbb`](https://creditcoin-testnet.blockscout.com/address/0xc5c9B5A4842B20D945aAD6824A58Afdbb78fecbb) |
 
-JSON placeholders: `packages/*/deployments/*.json`.
+JSON: `packages/*/deployments/*.json`.
+
+> Same hex for Sepolia MockUSD ↔ CC3 MockUSD (and Sepolia MockMarket ↔ CC3 CreditScore) is a CREATE-address coincidence from matching deployer nonces — different chains.
 
 ## Repo layout
 
@@ -79,9 +81,9 @@ npm install
 
 # Foundry deps (once per machine)
 cd packages/contracts-sepolia
-forge install foundry-rs/forge-std@v1.9.4 OpenZeppelin/openzeppelin-contracts@v5.0.2 --no-commit
+forge install foundry-rs/forge-std@v1.9.4 OpenZeppelin/openzeppelin-contracts@v5.0.2
 cd ../contracts-creditcoin
-forge install foundry-rs/forge-std@v1.9.4 OpenZeppelin/openzeppelin-contracts@v5.0.2 --no-commit
+forge install foundry-rs/forge-std@v1.9.4 OpenZeppelin/openzeppelin-contracts@v5.0.2
 npm install @gluwa/asc-contracts@0.2.1
 cd ../..
 
@@ -90,19 +92,18 @@ cd packages/contracts-sepolia && forge test
 cd ../contracts-creditcoin && forge test
 ```
 
-## Deploy (needs keys — TODO for live credentials)
+## Deploy (testnets)
 
 ```bash
-# 1) Sepolia
-cd packages/contracts-sepolia
-forge script script/Deploy.s.sol:DeploySepolia --rpc-url $SEPOLIA_RPC_URL --broadcast --private-key $SEPOLIA_PRIVATE_KEY
+cp .env.example .env
+# set SEPOLIA_PRIVATE_KEY + CREDITCOIN_PRIVATE_KEY (funded deployer)
 
-# 2) Export SEPOLIA_MOCK_MARKET from the deploy logs, then Creditcoin
-cd ../contracts-creditcoin
-forge script script/Deploy.s.sol:DeployCreditcoin --rpc-url $CREDITCOIN_RPC_URL --broadcast --private-key $CREDITCOIN_PRIVATE_KEY
-
-# 3) Copy addresses into .env + apps/web NEXT_PUBLIC_* + deployments/*.json
+bash scripts/deploy-all.sh
+# or, if Sepolia is already live:
+# bash scripts/deploy-creditcoin.sh
 ```
+
+Creditcoin uses `forge create` (not `forge script`) because CC3 Substrate EVM omits `prevrandao` and Foundry always simulates scripts locally.
 
 ### Faucets
 

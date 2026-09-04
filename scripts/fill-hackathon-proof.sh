@@ -19,8 +19,8 @@ from pathlib import Path
 p = Path("README.md")
 text = p.read_text()
 replacements = [
-    ("| Sepolia \`LoanRepaid\` tx | **TBD** |", f"| Sepolia \`LoanRepaid\` tx | [`{SEPOLIA_TX}`]({SEPOLIA_URL}) |"),
-    ("| Creditcoin \`proveRepayment\` tx | **TBD** |", f"| Creditcoin \`proveRepayment\` tx | [`{CREDIT_TX}`]({CREDIT_URL}) |"),
+    ("| Sepolia \`LoanRepaid\` tx | **TBD** |", f"| Sepolia \`LoanRepaid\` tx | [\`{SEPOLIA_TX}\`]({SEPOLIA_URL}) |"),
+    ("| Creditcoin \`proveRepayment\` tx | **TBD** |", f"| Creditcoin \`proveRepayment\` tx | [\`{CREDIT_TX}\`]({CREDIT_URL}) |"),
     ("| Passport tokenId | **TBD** |", f"| Passport tokenId | **{TOKEN_ID}** |"),
 ]
 for old, new in replacements:

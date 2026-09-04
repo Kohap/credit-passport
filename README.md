@@ -19,11 +19,11 @@ Repayment lives on Sepolia; credit decisions live on Creditcoin. Attestcoin is t
 
 | Artifact | Value |
 | --- | --- |
-| Sepolia `LoanRepaid` tx | **TBD** |
-| Creditcoin `proveRepayment` tx | **TBD** |
-| Passport tokenId | **TBD** |
+| Sepolia `LoanRepaid` tx | [`0x90b0010cf1e7e65d31d6899d726db892ad901f2d398099ec6336e019a11db942`](https://sepolia.etherscan.io/tx/0x90b0010cf1e7e65d31d6899d726db892ad901f2d398099ec6336e019a11db942) |
+| Creditcoin `proveRepayment` tx | [`0xe98c7698281b5470d822d82589353d75eb1522f91d6eb57fbdc12d5c4527aea2`](https://creditcoin-testnet.blockscout.com/tx/0xe98c7698281b5470d822d82589353d75eb1522f91d6eb57fbdc12d5c4527aea2) |
+| Passport tokenId | see NFT on Creditcoin for `0x3953A716…E5EA` (run `cast call` below) |
 
-Paste the worker’s `HACKATHON PROOF` block here after `npm run prove -- <tx> --submit`.
+Live proof (2026-09-04). Same EOA `0x3953A716DA94e51EAFE6F2224379332B0BEEE5EA`. Optional: `cast call 0x3E6CB0dC03e72E57ac91c8D74cF2246079F1B09e "tokenOf(address)(uint256)" 0x3953A716DA94e51EAFE6F2224379332B0BEEE5EA --rpc-url https://rpc.cc3-testnet.creditcoin.network`
 
 ## Deployed addresses
 

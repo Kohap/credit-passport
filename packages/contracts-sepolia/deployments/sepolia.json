@@ -1,0 +1,8 @@
+{
+  "network": "sepolia",
+  "chainId": 11155111,
+  "MockUSD": null,
+  "MockMarket": null,
+  "deployedAt": null,
+  "notes": "Fill after forge script DeploySepolia"
+}

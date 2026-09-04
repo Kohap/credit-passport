@@ -1,0 +1,10 @@
+{
+  "name": "Credit Passport",
+  "install": "npm install",
+  "terminals": [
+    {
+      "name": "web",
+      "command": "npm run dev:web"
+    }
+  ]
+}

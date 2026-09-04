@@ -523,7 +523,7 @@ export function Desk() {
           <textarea
             className="input"
             style={{ width: "100%", minHeight: "8rem", marginTop: "0.75rem" }}
-            placeholder='Paste proof.json from the worker CLI (or flat ProofPayload JSON)'
+            placeholder="Paste proof.json from: npm run prove -- <tx> --json-out proof.json"
             value={pasteJson}
             onChange={(e) => setPasteJson(e.target.value)}
           />

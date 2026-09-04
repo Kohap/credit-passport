@@ -33,8 +33,8 @@ Demo deployer: [`0x3953A716DA94e51EAFE6F2224379332B0BEEE5EA`](https://creditcoin
 | --- | --- | --- |
 | MockUSD | Sepolia | [`0x5D695DD7bd61D22731973F32e84c8D797FEed701`](https://sepolia.etherscan.io/address/0x5D695DD7bd61D22731973F32e84c8D797FEed701) |
 | MockMarket | Sepolia | [`0xEd2a52496044771bE1a3583f2d7061da33427a6a`](https://sepolia.etherscan.io/address/0xEd2a52496044771bE1a3583f2d7061da33427a6a) |
-| MockUSD | Creditcoin | [`0x5D695DD7bd61D22731973F32e84c8D797FEed701`](https://creditcoin-testnet.blockscout.com/address/0x5D695DD7bd61D22731973F32e84c8D797FEed701) |
 | CreditScore | Creditcoin | [`0xEd2a52496044771bE1a3583f2d7061da33427a6a`](https://creditcoin-testnet.blockscout.com/address/0xEd2a52496044771bE1a3583f2d7061da33427a6a) |
+| MockUSD | Creditcoin | [`0x5D695DD7bd61D22731973F32e84c8D797FEed701`](https://creditcoin-testnet.blockscout.com/address/0x5D695DD7bd61D22731973F32e84c8D797FEed701) |
 | CreditLine | Creditcoin | [`0xFA2f6AD61e9A1c44eD03509f386DE4DDa5ecfa7e`](https://creditcoin-testnet.blockscout.com/address/0xFA2f6AD61e9A1c44eD03509f386DE4DDa5ecfa7e) |
 | PassportNFT | Creditcoin | [`0x3E6CB0dC03e72E57ac91c8D74cF2246079F1B09e`](https://creditcoin-testnet.blockscout.com/address/0x3E6CB0dC03e72E57ac91c8D74cF2246079F1B09e) |
 | CreditPassportASC | Creditcoin | [`0xc5c9B5A4842B20D945aAD6824A58Afdbb78fecbb`](https://creditcoin-testnet.blockscout.com/address/0xc5c9B5A4842B20D945aAD6824A58Afdbb78fecbb) |
@@ -65,11 +65,13 @@ npm run prove -- 0xSEPOLIA_TX_HASH --submit --claim 0xYourAddress
 ## Reproduce one proof
 
 ```bash
-cp .env.example .env   # set SEPOLIA_* + CREDITCOIN_* keys (funded)
+cp .env.example .env   # set SEPOLIA_* + CREDITCOIN_* keys (same funded EOA, Sepolia ETH + tCTC)
 npm install
-bash scripts/fund-creditline.sh          # once — mUSD liquidity on CreditLine
-bash scripts/demo-e2e.sh                 # faucet → open → repay → prove --submit
-# copy HACKATHON PROOF block into the table above
+bash scripts/fund-creditline.sh
+bash scripts/demo-e2e.sh                 # mint→open→repay→prove --submit (tees HACKATHON PROOF)
+# then:
+bash scripts/fill-hackathon-proof.sh <sepoliaTx> <creditcoinTx> [tokenId]
+# hit record the same hour
 ```
 
 ## Networks
@@ -110,7 +112,6 @@ No Chainlink, Pyth, or centralized backend decides the repayment.
 ```
 packages/contracts-sepolia/     MockUSD + MockMarket (LoanRepaid)
 packages/contracts-creditcoin/  ASC + score + line + soulbound NFT
-packages/worker/                prove.ts CLI (@gluwa/usc-sdk)
 apps/web/                       Next.js dual-chain desk
 scripts/fund-creditline.sh     mint/transfer mUSD → CreditLine
 scripts/demo-e2e.sh             full faucet → prove path

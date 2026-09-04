@@ -1,13 +1,22 @@
 {
-  "network": "creditcoin-cc3-testnet",
   "chainId": 102031,
-  "sepoliaChainKey": 1,
-  "MockUSD": null,
-  "CreditScore": null,
-  "CreditLine": null,
-  "PassportNFT": null,
-  "CreditPassportASC": null,
-  "trustedSepoliaMockMarket": null,
-  "deployedAt": null,
-  "notes": "Fill after forge script DeployCreditcoin"
+  "MockUSD": "0x5D695DD7bd61D22731973F32e84c8D797FEed701",
+  "CreditScore": "0xEd2a52496044771bE1a3583f2d7061da33427a6a",
+  "CreditLine": "0xFA2f6AD61e9A1c44eD03509f386DE4DDa5ecfa7e",
+  "PassportNFT": "0x3E6CB0dC03e72E57ac91c8D74cF2246079F1B09e",
+  "CreditPassportASC": "0xc5c9B5A4842B20D945aAD6824A58Afdbb78fecbb",
+  "trustedSepoliaMockMarket": "0xEd2a52496044771bE1a3583f2d7061da33427a6a",
+  "deployer": "0x3953A716DA94e51EAFE6F2224379332B0BEEE5EA",
+  "tx": {
+    "MockUSD": "0x38051e241bc919249e7e1ab5081ff209fb05df5fa323a327c8dbda313dfc0629",
+    "CreditScore": "0xa08b4d203fa1263c1f54f14233344fabaef44d0b007c3cbac05aae4afa7c716c",
+    "CreditLine": "0xf430995ba496589d37d685c43e100580b9ecc3327ba4ced6246f578fb9c7fb70",
+    "PassportNFT": "0x3c5956ec737824e61bc5d23e1cf8c7619d80c4daf980934eb784d729dcd8647b",
+    "CreditPassportASC": "0x98ae14df7772635e870601896ea764185d087bff0f1acb0fdd6e2b71120a6017",
+    "setWriter": "0x586327025d0d92a2a1f32ed059b050fdf86801a385b7cf41f0e9642a71d1066e",
+    "setUpdater": "0x39bb66119e79565002ae72595bc64d06e92d03d1d10cb89e5329de0d758c01c1",
+    "setMinter": "0x382f0731bcaf8f3b66b92af5de89aae7a9a8fb248356bf1f20cd5dde0a47d10d",
+    "mintLineInventory": "0x471105b8e1611f4e6f4b5b2d87e5e8dc4171ca2e3ffbc8766d132730d46b43eb"
+  },
+  "note": "First two CREATE addresses match Sepolia MockUSD/MockMarket by deployer nonce coincidence — different chains, OK."
 }

@@ -1,1 +1,1 @@
-LOAD_FROM_DISK
+@file:///tmp/DESK_RAW.tsx

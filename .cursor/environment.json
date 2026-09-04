@@ -1,0 +1,10 @@
+{
+  "name": "Credit Passport",
+  "install": "cd apps/web && npm install",
+  "terminals": [
+    {
+      "name": "web",
+      "command": "cd apps/web && npm run dev"
+    }
+  ]
+}

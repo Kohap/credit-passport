@@ -1,8 +1,10 @@
 {
-  "network": "sepolia",
   "chainId": 11155111,
-  "MockUSD": null,
-  "MockMarket": null,
-  "deployedAt": null,
-  "notes": "Fill after forge script DeploySepolia"
+  "MockUSD": "0x5D695DD7bd61D22731973F32e84c8D797FEed701",
+  "MockMarket": "0xEd2a52496044771bE1a3583f2d7061da33427a6a",
+  "deployer": "0x3953A716DA94e51EAFE6F2224379332B0BEEE5EA",
+  "tx": {
+    "MockUSD": "0xf5fcd67db46d6551003ad6f27b55aae0a44cc08352e3820fa762042713aad9cd",
+    "MockMarket": "0x5e6f68b4895b51e31b86a8d935346c508bc1d2634bc25a58f2822ed5ed98b617"
+  }
 }

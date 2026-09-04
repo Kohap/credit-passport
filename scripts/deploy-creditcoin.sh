@@ -47,9 +47,13 @@ echo "==> trusted Sepolia MockMarket: $SEPOLIA_MOCK_MARKET"
 export SEPOLIA_MOCK_MARKET
 CC_OUT="$(
   cd packages/contracts-creditcoin
+  # CC3 Substrate EVM omits prevrandao → Foundry simulation fails without --skip-simulation.
+  # --legacy uses pre-EIP-1559 gas fields that CC3 accepts reliably.
   forge script script/Deploy.s.sol:DeployCreditcoin \
     --rpc-url "$CREDITCOIN_RPC_URL" \
     --broadcast \
+    --skip-simulation \
+    --legacy \
     --private-key "$CREDITCOIN_PRIVATE_KEY" \
     -vv
 )"

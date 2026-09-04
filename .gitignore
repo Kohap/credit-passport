@@ -16,12 +16,12 @@ broadcast/
 coverage/
 lcov.info
 .turbo/
+.cursor/
 packages/contracts-sepolia/lib/**/.git
 packages/contracts-creditcoin/lib/**/.git
 # Foundry libs installed via `forge install` (see README)
 packages/contracts-sepolia/lib/
 packages/contracts-creditcoin/lib/
 packages/contracts-creditcoin/node_modules/
-.next/
 apps/web/.next/
 *.tsbuildinfo

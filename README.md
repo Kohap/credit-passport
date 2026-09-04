@@ -2,18 +2,18 @@
 
 **BUIDL CTC 2026 Fall · DeFi track · Attestcoin Protocol**
 
-Credit Passport proves a borrower repaid a loan on **Ethereum Sepolia**, then unlocks a credit line, raises a borrow cap, and mints a soulbound **Credit Passport** NFT on **Creditcoin CC3 Testnet**. Underwriting only advances after **Attestcoin** cryptographically verifies the source-chain transaction and its `LoanRepaid` event — not after a bridge, oracle, or “trust me” backend.
+Credit Passport proves a borrower repaid on **Ethereum Sepolia** (today: a **MockMarket** fixture), then raises a borrow cap and mints a soulbound **Credit Passport** NFT on **Creditcoin CC3 Testnet** — optionally drawing from a funded CreditLine. Underwriting only advances after **Attestcoin** cryptographically verifies the source-chain tx and its `LoanRepaid` event. The loan source is mock; the Attestcoin path is real.
 
 ## Why Attestcoin is required
 
 Repayment lives on Sepolia; credit decisions live on Creditcoin. Attestcoin is the only on-chain source of truth that the Sepolia tx existed, succeeded (`receiptStatus == 1`), and emitted our event before score / cap / NFT update.
 
-## Live app
+## Live app (convenience) vs proof (source of truth)
 
-**https://kohap.github.io/credit-passport/** — static Next.js desk (GitHub Pages).  
-Local: `npm run dev:web` → http://localhost:3000
+- **Desk:** https://kohap.github.io/credit-passport/ — only submit this URL once it loads **Connect wallet** (not README/404). Local: `npm run dev:web`.
+- **Proof of Attestcoin:** `npm run prove -- <sepoliaTx> --submit` (CLI). Browser prove can CORS-fail; CLI is what you record if Pages is flaky.
 
-> First-time Pages setup: repo **Settings → Pages → Source: GitHub Actions**. Push to `main` runs `.github/workflows/pages.yml`.
+> Pages: **Settings → Pages → Source: GitHub Actions**. Do not put a 404 in DoraHacks “Prototype Demo Video URL.”
 
 ## Hackathon proof (fill after live E2E)
 
@@ -41,13 +41,15 @@ Demo deployer: [`0x3953A716DA94e51EAFE6F2224379332B0BEEE5EA`](https://creditcoin
 
 JSON: `packages/*/deployments/*.json`. Same hex across chains is a CREATE-address coincidence (matching deployer nonces) — different networks.
 
-## 90-second click path
+## 90-second demo path (one MetaMask EOA)
 
-1. Open the live app → **Connect** → **Add Sepolia + CC3 to wallet**.
-2. **Faucet** mUSD on Sepolia → **Open loan** → **Repay**.
-3. **Prove on Creditcoin** — watch phases: `waiting_source` → `waiting_attestation` → `generating_proof` → `submitting` → `verified`.
-4. Note score before/after, borrow cap, passport tokenId + explorer links.
-5. **Borrow on Creditcoin** (10 mUSD). If it fails with no liquidity: `bash scripts/fund-creditline.sh`.
+Say out loud: **same wallet on Sepolia + CC3** (ASC reverts `BorrowerMismatch` otherwise).
+
+1. **Connect** one account → **Add Sepolia + CC3**.
+2. Sepolia: **Faucet** → **Open** MockMarket loan → **Repay** (`LoanRepaid`).
+3. Prove: prefer `npm run prove -- <tx> --submit --claim <sameAddress>` (or Desk prove if CORS allows).
+4. Show explorers + score before/after + cap + passport tokenId.
+5. **Only if funded:** `bash scripts/fund-creditline.sh` once, then **Borrow 10 mUSD**. If unfunded, stop at cap + NFT — do not claim “unlock a line” you cannot draw.
 
 ## CLI fallback (CORS / offline proof)
 
@@ -58,7 +60,7 @@ npm run prove -- 0xSEPOLIA_TX_HASH --json-out proof.json
 npm run prove -- 0xSEPOLIA_TX_HASH --submit --claim 0xYourAddress
 ```
 
-Or paste `proof.json` into the Desk “CORS fallback” panel and submit from the UI.
+`--json-out` writes a **flat** proof document (`merkleRoot`, `siblings`, `txBytes`, …) that Desk paste accepts directly (ADR-0003). Paste `proof.json` into the CORS fallback panel.
 
 ## Reproduce one proof
 

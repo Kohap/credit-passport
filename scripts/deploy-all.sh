@@ -129,11 +129,15 @@ cat > packages/contracts-creditcoin/deployments/cc3-testnet.json <<EOF
 }
 EOF
 
-# Patch .env in place (keys already present as empty or placeholders)
+# Patch .env in place (macOS sed needs '' after -i; GNU sed does not)
 patch_env() {
   local key="$1" val="$2"
   if grep -q "^${key}=" .env; then
-    sed -i "s|^${key}=.*|${key}=${val}|" .env
+    if sed --version >/dev/null 2>&1; then
+      sed -i "s|^${key}=.*|${key}=${val}|" .env
+    else
+      sed -i '' "s|^${key}=.*|${key}=${val}|" .env
+    fi
   else
     echo "${key}=${val}" >> .env
   fi

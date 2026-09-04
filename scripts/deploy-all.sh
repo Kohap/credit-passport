@@ -56,13 +56,20 @@ need_forge_libs() {
   return 1
 }
 
+# Newer Foundry defaults to no git commit; older used --no-commit. Avoid both flags.
+forge_install() {
+  local dir="$1"
+  shift
+  (cd "$dir" && forge install "$@" </dev/null)
+}
+
 if need_forge_libs packages/contracts-sepolia; then
   echo "==> forge install (sepolia)"
-  (cd packages/contracts-sepolia && forge install foundry-rs/forge-std OpenZeppelin/openzeppelin-contracts --no-commit)
+  forge_install packages/contracts-sepolia foundry-rs/forge-std OpenZeppelin/openzeppelin-contracts
 fi
 if need_forge_libs packages/contracts-creditcoin; then
   echo "==> forge install (creditcoin)"
-  (cd packages/contracts-creditcoin && forge install foundry-rs/forge-std OpenZeppelin/openzeppelin-contracts --no-commit)
+  forge_install packages/contracts-creditcoin foundry-rs/forge-std OpenZeppelin/openzeppelin-contracts
   (cd packages/contracts-creditcoin && npm install @gluwa/asc-contracts --no-fund --no-audit 2>/dev/null || true)
 fi
 

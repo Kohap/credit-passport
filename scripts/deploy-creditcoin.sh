@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
-# Resume Creditcoin deploy after Sepolia already succeeded.
-# Usage (from repo root, with .env loaded):
-#   bash scripts/deploy-creditcoin.sh
+# Deploy Credit Passport stack on Creditcoin CC3 via forge create + cast send.
+# forge script fails on CC3: Substrate EVM omits prevrandao and Foundry always
+# simulates scripts locally (even with --skip-simulation).
+#
+# Prerequisites: .env with CREDITCOIN_* keys and SEPOLIA_MOCK_MARKET set.
+# Usage: bash scripts/deploy-creditcoin.sh
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -32,7 +35,6 @@ if need_forge_libs packages/contracts-creditcoin; then
   (cd packages/contracts-creditcoin && npm install @gluwa/asc-contracts --no-fund --no-audit 2>/dev/null || true)
 fi
 
-# Re-pin OZ if Cancun-only version was installed
 ver="$(python3 -c "import json;print(json.load(open('packages/contracts-creditcoin/lib/openzeppelin-contracts/package.json')).get('version',''))" 2>/dev/null || echo "")"
 if [[ -n "$ver" && "$ver" != "5.0.2" ]]; then
   echo "==> Re-pinning OpenZeppelin (found $ver, need 5.0.2)"
@@ -44,25 +46,53 @@ ADDR="$(cast wallet address --private-key "$CREDITCOIN_PRIVATE_KEY")"
 echo "==> Deployer: $ADDR"
 echo "==> trusted Sepolia MockMarket: $SEPOLIA_MOCK_MARKET"
 
-export SEPOLIA_MOCK_MARKET
-CC_OUT="$(
-  cd packages/contracts-creditcoin
-  # CC3 Substrate EVM omits prevrandao → Foundry simulation fails without --skip-simulation.
-  # --legacy uses pre-EIP-1559 gas fields that CC3 accepts reliably.
-  forge script script/Deploy.s.sol:DeployCreditcoin \
-    --rpc-url "$CREDITCOIN_RPC_URL" \
-    --broadcast \
-    --skip-simulation \
-    --legacy \
-    --private-key "$CREDITCOIN_PRIVATE_KEY" \
-    -vv
-)"
-echo "$CC_OUT"
-CREDITCOIN_MOCK_USD="$(echo "$CC_OUT" | sed -n 's/.*CREDITCOIN_MOCK_USD[[:space:]]*//p' | tail -1 | tr -d '\r')"
-CREDITCOIN_CREDIT_SCORE="$(echo "$CC_OUT" | sed -n 's/.*CREDITCOIN_CREDIT_SCORE[[:space:]]*//p' | tail -1 | tr -d '\r')"
-CREDITCOIN_CREDIT_LINE="$(echo "$CC_OUT" | sed -n 's/.*CREDITCOIN_CREDIT_LINE[[:space:]]*//p' | tail -1 | tr -d '\r')"
-CREDITCOIN_PASSPORT_NFT="$(echo "$CC_OUT" | sed -n 's/.*CREDITCOIN_PASSPORT_NFT[[:space:]]*//p' | tail -1 | tr -d '\r')"
-CREDITCOIN_PASSPORT_ASC="$(echo "$CC_OUT" | sed -n 's/.*CREDITCOIN_PASSPORT_ASC[[:space:]]*//p' | tail -1 | tr -d '\r')"
+RPC=(--rpc-url "$CREDITCOIN_RPC_URL" --private-key "$CREDITCOIN_PRIVATE_KEY" --legacy)
+CREATE=(forge create --broadcast "${RPC[@]}")
+
+cd packages/contracts-creditcoin
+forge build
+
+echo "==> MockUSD"
+USD_OUT="$("${CREATE[@]}" src/MockUSD.sol:MockUSD --constructor-args "$ADDR")"
+echo "$USD_OUT"
+CREDITCOIN_MOCK_USD="$(echo "$USD_OUT" | sed -n 's/.*Deployed to:[[:space:]]*//p' | tail -1 | tr -d '\r')"
+
+echo "==> CreditScore"
+SCORE_OUT="$("${CREATE[@]}" src/CreditScore.sol:CreditScore --constructor-args "$ADDR")"
+echo "$SCORE_OUT"
+CREDITCOIN_CREDIT_SCORE="$(echo "$SCORE_OUT" | sed -n 's/.*Deployed to:[[:space:]]*//p' | tail -1 | tr -d '\r')"
+
+echo "==> CreditLine"
+LINE_OUT="$("${CREATE[@]}" src/CreditLine.sol:CreditLine --constructor-args "$CREDITCOIN_MOCK_USD" "$ADDR")"
+echo "$LINE_OUT"
+CREDITCOIN_CREDIT_LINE="$(echo "$LINE_OUT" | sed -n 's/.*Deployed to:[[:space:]]*//p' | tail -1 | tr -d '\r')"
+
+echo "==> PassportNFT"
+NFT_OUT="$("${CREATE[@]}" src/PassportNFT.sol:PassportNFT --constructor-args "$ADDR")"
+echo "$NFT_OUT"
+CREDITCOIN_PASSPORT_NFT="$(echo "$NFT_OUT" | sed -n 's/.*Deployed to:[[:space:]]*//p' | tail -1 | tr -d '\r')"
+
+echo "==> CreditPassportASC"
+ASC_OUT="$("${CREATE[@]}" src/CreditPassportASC.sol:CreditPassportASC \
+  --constructor-args "$SEPOLIA_MOCK_MARKET" "$CREDITCOIN_CREDIT_SCORE" "$CREDITCOIN_CREDIT_LINE" "$CREDITCOIN_PASSPORT_NFT")"
+echo "$ASC_OUT"
+CREDITCOIN_PASSPORT_ASC="$(echo "$ASC_OUT" | sed -n 's/.*Deployed to:[[:space:]]*//p' | tail -1 | tr -d '\r')"
+
+for name in CREDITCOIN_MOCK_USD CREDITCOIN_CREDIT_SCORE CREDITCOIN_CREDIT_LINE CREDITCOIN_PASSPORT_NFT CREDITCOIN_PASSPORT_ASC; do
+  val="${!name}"
+  if [[ -z "$val" || "$val" != 0x* ]]; then
+    echo "ERROR: failed to parse $name from forge create output" >&2
+    exit 1
+  fi
+done
+
+echo "==> Wire roles + seed CreditLine inventory"
+cast send "$CREDITCOIN_CREDIT_SCORE" "setWriter(address)" "$CREDITCOIN_PASSPORT_ASC" "${RPC[@]}"
+cast send "$CREDITCOIN_CREDIT_LINE" "setUpdater(address)" "$CREDITCOIN_PASSPORT_ASC" "${RPC[@]}"
+cast send "$CREDITCOIN_PASSPORT_NFT" "setMinter(address)" "$CREDITCOIN_PASSPORT_ASC" "${RPC[@]}"
+cast send "$CREDITCOIN_MOCK_USD" "mint(address,uint256)" "$CREDITCOIN_CREDIT_LINE" 10000000000000000000000000 "${RPC[@]}"
+
+cd "$ROOT"
 
 mkdir -p packages/contracts-creditcoin/deployments
 cat > packages/contracts-creditcoin/deployments/cc3-testnet.json <<EOF
@@ -100,7 +130,6 @@ patch_env NEXT_PUBLIC_CREDITCOIN_CREDIT_SCORE "$CREDITCOIN_CREDIT_SCORE"
 patch_env NEXT_PUBLIC_CREDITCOIN_CREDIT_LINE "$CREDITCOIN_CREDIT_LINE"
 patch_env NEXT_PUBLIC_CREDITCOIN_PASSPORT_NFT "$CREDITCOIN_PASSPORT_NFT"
 patch_env NEXT_PUBLIC_CREDITCOIN_PASSPORT_ASC "$CREDITCOIN_PASSPORT_ASC"
-# Keep Sepolia addresses if present from earlier run
 patch_env SEPOLIA_MOCK_MARKET "$SEPOLIA_MOCK_MARKET"
 if [[ -n "${SEPOLIA_MOCK_USD:-}" ]]; then
   patch_env SEPOLIA_MOCK_USD "$SEPOLIA_MOCK_USD"

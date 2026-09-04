@@ -65,11 +65,13 @@ npm run prove -- 0xSEPOLIA_TX_HASH --submit --claim 0xYourAddress
 ## Reproduce one proof
 
 ```bash
-cp .env.example .env   # set SEPOLIA_* + CREDITCOIN_* keys (funded)
+cp .env.example .env   # set SEPOLIA_* + CREDITCOIN_* keys (same funded EOA, Sepolia ETH + tCTC)
 npm install
-bash scripts/fund-creditline.sh          # once — mUSD liquidity on CreditLine
-bash scripts/demo-e2e.sh                 # faucet → open → repay → prove --submit
-# copy HACKATHON PROOF block into the table above
+bash scripts/fund-creditline.sh
+bash scripts/demo-e2e.sh                 # mint→open→repay→prove --submit (tees HACKATHON PROOF)
+# then:
+bash scripts/fill-hackathon-proof.sh <sepoliaTx> <creditcoinTx> [tokenId]
+# hit record the same hour
 ```
 
 ## Networks
@@ -110,7 +112,6 @@ No Chainlink, Pyth, or centralized backend decides the repayment.
 ```
 packages/contracts-sepolia/     MockUSD + MockMarket (LoanRepaid)
 packages/contracts-creditcoin/  ASC + score + line + soulbound NFT
-packages/worker/                prove.ts CLI (@gluwa/usc-sdk)
 apps/web/                       Next.js dual-chain desk
 scripts/fund-creditline.sh     mint/transfer mUSD → CreditLine
 scripts/demo-e2e.sh             full faucet → prove path

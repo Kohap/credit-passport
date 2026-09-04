@@ -57,6 +57,7 @@ need_forge_libs() {
 }
 
 # Newer Foundry defaults to no git commit; older used --no-commit. Avoid both flags.
+# Pin OZ to v5.0.2 — v5.7+ needs Cancun (mcopy); Creditcoin profile is shanghai.
 forge_install() {
   local dir="$1"
   shift
@@ -65,13 +66,34 @@ forge_install() {
 
 if need_forge_libs packages/contracts-sepolia; then
   echo "==> forge install (sepolia)"
-  forge_install packages/contracts-sepolia foundry-rs/forge-std OpenZeppelin/openzeppelin-contracts
+  forge_install packages/contracts-sepolia \
+    foundry-rs/forge-std@v1.9.4 \
+    OpenZeppelin/openzeppelin-contracts@v5.0.2
 fi
 if need_forge_libs packages/contracts-creditcoin; then
   echo "==> forge install (creditcoin)"
-  forge_install packages/contracts-creditcoin foundry-rs/forge-std OpenZeppelin/openzeppelin-contracts
+  forge_install packages/contracts-creditcoin \
+    foundry-rs/forge-std@v1.9.4 \
+    OpenZeppelin/openzeppelin-contracts@v5.0.2
   (cd packages/contracts-creditcoin && npm install @gluwa/asc-contracts --no-fund --no-audit 2>/dev/null || true)
 fi
+
+# If OZ was previously installed at a Cancun-only tag, force the shanghai-safe pin.
+ensure_oz_pin() {
+  local dir="$1"
+  local tag_file="$dir/lib/openzeppelin-contracts/.git/HEAD"
+  if [[ -d "$dir/lib/openzeppelin-contracts" ]] && ! grep -q 'v5.0.2\|5.0.2' "$dir/lib/openzeppelin-contracts/package.json" 2>/dev/null; then
+    local ver
+    ver="$(python3 -c "import json;print(json.load(open('$dir/lib/openzeppelin-contracts/package.json')).get('version',''))" 2>/dev/null || true)"
+    if [[ -n "$ver" && "$ver" != "5.0.2" ]]; then
+      echo "==> Re-pinning OpenZeppelin in $dir (found $ver, need 5.0.2 for shanghai)"
+      rm -rf "$dir/lib/openzeppelin-contracts"
+      forge_install "$dir" OpenZeppelin/openzeppelin-contracts@v5.0.2
+    fi
+  fi
+}
+ensure_oz_pin packages/contracts-sepolia
+ensure_oz_pin packages/contracts-creditcoin
 
 echo "==> Deploy Sepolia MockUSD + MockMarket"
 SEP_OUT="$(
@@ -97,6 +119,8 @@ CC_OUT="$(
   forge script script/Deploy.s.sol:DeployCreditcoin \
     --rpc-url "$CREDITCOIN_RPC_URL" \
     --broadcast \
+    --skip-simulation \
+    --legacy \
     --private-key "$CREDITCOIN_PRIVATE_KEY" \
     -vv
 )"

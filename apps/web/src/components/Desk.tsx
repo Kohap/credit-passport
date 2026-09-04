@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { ConnectButton } from "@/components/ConnectButton";
 import { useCallback, useMemo, useState } from "react";
 import {
@@ -365,25 +366,25 @@ export function Desk() {
 
   return (
     <main className="desk">
-      <section className="hero" aria-labelledby="brand">
-        <h1 id="brand" className="brand">
-          Credit Passport
-        </h1>
-        <p className="lede">
-          Prove a Sepolia repayment on Creditcoin with Attestcoin — unlock a credit line and mint
-          a soulbound Passport. Same wallet. No oracle operator.
-        </p>
+      <header className="desk-top">
+        <div className="desk-top-brand">
+          <Link href="/" className="desk-home">
+            Credit Passport
+          </Link>
+          <p className="desk-top-lede">
+            Prove Sepolia repayment on Creditcoin — same wallet, Attestcoin verification.
+          </p>
+        </div>
         <div className="hero-actions">
           <ConnectButton />
           <button type="button" className="btn btn-ghost" onClick={() => void addNetworks()}>
             Add Sepolia + CC3
           </button>
         </div>
-        <p className="hero-meta">
-          BUIDL CTC 2026 · Sepolia {SEPOLIA_CHAIN_ID} → Creditcoin {CREDITCOIN_CHAIN_ID} · Attestcoin
-          chainKey 1
-        </p>
-      </section>
+      </header>
+      <p className="hero-meta desk-meta">
+        Sepolia {SEPOLIA_CHAIN_ID} → Creditcoin {CREDITCOIN_CHAIN_ID} · Attestcoin chainKey 1
+      </p>
 
       <ol className="rail" aria-label="Demo progress">
         <li className="rail-step" data-state={step1State}>

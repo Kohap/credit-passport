@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { ConnectButton } from "@/components/ConnectButton";
 import { useCallback, useMemo, useState } from "react";
 import {
@@ -210,7 +211,7 @@ export function Desk() {
       chainId: SEPOLIA_CHAIN_ID,
     });
     setRepayTx(hash);
-    setStatus(`Repay tx ${hash} — next: prove on Creditcoin.`);
+    setStatus(`Repay tx ${hash}. Next: prove on Creditcoin.`);
   }
 
   async function submitProveRepayment(payload: ProofPayload) {
@@ -344,205 +345,218 @@ export function Desk() {
     ? `npm run prove -- ${repayTx} --json-out proof.json`
     : "npm run prove -- 0xSEPOLIA_TX --json-out proof.json";
 
+  const step1State = repayTx ? "done" : "active";
+  const step2State =
+    phase === "verified"
+      ? "done"
+      : repayTx
+        ? "active"
+        : "idle";
+  const step3State =
+    phase === "verified" || borrowTx
+      ? phase === "verified" && borrowTx
+        ? "done"
+        : "active"
+      : "idle";
+
+  const proveBusy =
+    phase === "generating_proof" ||
+    phase === "waiting_attestation" ||
+    phase === "submitting";
+
   return (
-    <main>
-      <section className="hero">
-        <p className="badge">
-          <strong>CREDIT PASSPORT</strong> · BUIDL CTC 2026 · DeFi / Attestcoin
-        </p>
-        <h1 className="brand">Credit Passport</h1>
-        <p className="lede">
-          Prove that a borrower repaid on Ethereum Sepolia. Attestcoin verifies the tx +{" "}
-          <span className="mono">LoanRepaid</span> logs on Creditcoin CC3. Then unlock a credit
-          line and mint a soulbound Passport — no oracle operator.
-        </p>
-        <div className="row">
+    <main className="desk">
+      <header className="desk-top">
+        <div className="desk-top-brand">
+          <Link href="/" className="desk-home">
+            Credit Passport
+          </Link>
+          <p className="desk-top-lede">
+            Prove Sepolia repayment on Creditcoin. Same wallet, Attestcoin verification.
+          </p>
+        </div>
+        <div className="hero-actions">
           <ConnectButton />
           <button type="button" className="btn btn-ghost" onClick={() => void addNetworks()}>
-            Add Sepolia + CC3 to wallet
+            Add Sepolia + CC3
           </button>
         </div>
-        <div className="row">
-          <span className="badge">
-            Sepolia <strong>{SEPOLIA_CHAIN_ID}</strong>
-          </span>
-          <span className="badge">
-            Creditcoin <strong>{CREDITCOIN_CHAIN_ID}</strong>
-          </span>
-          <span className="badge">
-            chainKey <strong>1</strong> (≠ chainId)
-          </span>
-        </div>
-      </section>
+      </header>
+      <p className="hero-meta desk-meta">
+        Sepolia {SEPOLIA_CHAIN_ID} → Creditcoin {CREDITCOIN_CHAIN_ID} · Attestcoin chainKey 1
+      </p>
 
-      <section className="panel">
-        <h2>How Attestcoin is used</h2>
-        <p>
-          Attestcoin verifies inclusion with Merkle + continuity proofs via precompile{" "}
-          <span className="mono">0x…0FD2</span>. The Creditcoin contract checks{" "}
-          <span className="mono">receipt.status == 1</span> and that the log is{" "}
-          <span className="mono">LoanRepaid</span> from our Sepolia MockMarket. No Chainlink / Pyth
-          / centralized backend is the source of truth.
-        </p>
-        <ul>
-          {SCORE_FORMULA.map((line) => (
-            <li key={line}>{line}</li>
-          ))}
-        </ul>
-      </section>
+      <ol className="rail" aria-label="Demo progress">
+        <li className="rail-step" data-state={step1State}>
+          <span className="rail-index">01</span>
+          <span className="rail-label">Repay on Sepolia</span>
+        </li>
+        <li className="rail-step" data-state={step2State}>
+          <span className="rail-index">02</span>
+          <span className="rail-label">Prove on Creditcoin</span>
+        </li>
+        <li className="rail-step" data-state={step3State}>
+          <span className="rail-index">03</span>
+          <span className="rail-label">Unlock credit</span>
+        </li>
+      </ol>
 
       {!sepoliaReady || !creditReady ? (
-        <section className="panel">
+        <section className="alert" role="alert">
           <h2>Deploy addresses missing</h2>
           <p>
             Fill <span className="mono">.env</span> / <span className="mono">NEXT_PUBLIC_*</span>{" "}
-            after running the Foundry deploy scripts. Until then, UI actions that need contracts
-            will fail.
+            after Foundry deploy. Contract actions will fail until then.
           </p>
         </section>
       ) : null}
 
-      <div className="grid2">
-        <section className="panel">
-          <h2>1 · Sepolia mock loan</h2>
-          <p>Faucet mUSD → open 100 mUSD loan → repay (emits LoanRepaid).</p>
-          <div className="row" style={{ marginTop: "0.75rem" }}>
-            <input
-              className="input"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="amount (ether units)"
-            />
-            <input
-              className="input"
-              value={loanId}
-              onChange={(e) => setLoanId(e.target.value)}
-              placeholder="loanId"
-            />
-          </div>
-          <div className="row" style={{ marginTop: "0.75rem" }}>
-            <button
-              type="button"
-              className="btn"
-              disabled={!isConnected || !sepoliaReady}
-              onClick={() => void faucet()}
-            >
-              Faucet mUSD
-            </button>
-            <button
-              type="button"
-              className="btn"
-              disabled={!isConnected || !sepoliaReady}
-              onClick={() => void openLoan()}
-            >
-              Open loan
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              disabled={!isConnected || !sepoliaReady || repayPending}
-              onClick={() => void repayLoan()}
-            >
-              Repay loan
-            </button>
-          </div>
-          {repayTx ? (
-            <p className="mono" style={{ marginTop: "0.75rem" }}>
-              Sepolia repay:{" "}
-              <a href={`${SEPOLIA_EXPLORER}/tx/${repayTx}`} target="_blank" rel="noreferrer">
-                {repayTx}
-              </a>
-            </p>
-          ) : null}
-        </section>
-
-        <section className="panel">
-          <h2>2 · Prove on Creditcoin</h2>
-          <p>
-            Wait for attestation → generate proof → your wallet submits{" "}
-            <span className="mono">proveRepayment</span>.
-          </p>
-          <div className="row" style={{ marginTop: "0.75rem" }}>
-            <button
-              type="button"
-              className="btn btn-primary"
-              disabled={
-                !isConnected ||
-                !creditReady ||
-                !repayTx ||
-                phase === "generating_proof" ||
-                phase === "waiting_attestation" ||
-                phase === "submitting"
-              }
-              onClick={() => void proveOnCreditcoin()}
-            >
-              Prove repayment on Creditcoin
-            </button>
-            <button
-              type="button"
-              className="btn"
-              disabled={!isConnected || !creditReady || phase !== "verified"}
-              onClick={() => void borrowOnCreditcoin()}
-            >
-              Borrow 10 mUSD on Creditcoin
-            </button>
-          </div>
-          <p className={phaseClass} style={{ marginTop: "0.75rem" }}>
-            [{phase}] {status}
-          </p>
-          {creditTx ? (
-            <p className="mono">
-              Creditcoin prove:{" "}
-              <a href={`${CREDITCOIN_EXPLORER}/tx/${creditTx}`} target="_blank" rel="noreferrer">
-                {creditTx}
-              </a>
-            </p>
-          ) : null}
-          {borrowTx ? (
-            <p className="mono">
-              Creditcoin borrow:{" "}
-              <a href={`${CREDITCOIN_EXPLORER}/tx/${borrowTx}`} target="_blank" rel="noreferrer">
-                {borrowTx}
-              </a>
-            </p>
-          ) : null}
-        </section>
-      </div>
-
-      {corsFallback ? (
-        <section className="panel">
-          <h2>CLI proof fallback (CORS)</h2>
-          <p>
-            The browser could not reach the Attestcoin prover. Run this on your machine, then paste{" "}
-            <span className="mono">proof.json</span> below.
-          </p>
-          <p className="mono">{cliCmd}</p>
-          <p className="mono" style={{ marginTop: "0.5rem" }}>
-            Sepolia tx: {repayTx ?? "—"}
-          </p>
-          <textarea
+      <section className="section" aria-labelledby="step-sepolia">
+        <div className="section-head">
+          <h2 id="step-sepolia">Sepolia mock loan</h2>
+          <span className="section-kicker">Step 01</span>
+        </div>
+        <p>Faucet mUSD, open a loan, then repay to emit LoanRepaid.</p>
+        <div className="field-row">
+          <input
             className="input"
-            style={{ width: "100%", minHeight: "8rem", marginTop: "0.75rem" }}
-            placeholder="Paste proof.json from: npm run prove -- <tx> --json-out proof.json"
-            value={pasteJson}
-            onChange={(e) => setPasteJson(e.target.value)}
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="amount (ether units)"
+            aria-label="Loan amount"
           />
-          <div className="row" style={{ marginTop: "0.75rem" }}>
-            <button
-              type="button"
-              className="btn btn-primary"
-              disabled={!isConnected || !creditReady || !pasteJson.trim()}
-              onClick={() => void submitPastedProof()}
-            >
-              Submit pasted proof
-            </button>
-          </div>
-        </section>
-      ) : null}
+          <input
+            className="input"
+            value={loanId}
+            onChange={(e) => setLoanId(e.target.value)}
+            placeholder="loanId"
+            aria-label="Loan ID"
+          />
+        </div>
+        <div className="actions">
+          <button
+            type="button"
+            className="btn"
+            disabled={!isConnected || !sepoliaReady}
+            onClick={() => void faucet()}
+          >
+            Faucet mUSD
+          </button>
+          <button
+            type="button"
+            className="btn"
+            disabled={!isConnected || !sepoliaReady}
+            onClick={() => void openLoan()}
+          >
+            Open loan
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={!isConnected || !sepoliaReady || repayPending}
+            onClick={() => void repayLoan()}
+          >
+            {repayPending ? "Confirming repay…" : "Repay loan"}
+          </button>
+        </div>
+        {repayTx ? (
+          <p className="tx-line mono">
+            Sepolia repay:{" "}
+            <a href={`${SEPOLIA_EXPLORER}/tx/${repayTx}`} target="_blank" rel="noreferrer">
+              {repayTx}
+            </a>
+          </p>
+        ) : null}
+      </section>
 
-      <section className="panel">
-        <h2>Verified fields</h2>
-        <dl className="kv">
+      <section className="section" aria-labelledby="step-prove">
+        <div className="section-head">
+          <h2 id="step-prove">Prove on Creditcoin</h2>
+          <span className="section-kicker">Step 02</span>
+        </div>
+        <p>
+          Wait for Attestcoin height attestation, generate the inclusion proof, then submit{" "}
+          <span className="mono">proveRepayment</span> with the same wallet.
+        </p>
+        <div className="actions">
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={!isConnected || !creditReady || !repayTx || proveBusy}
+            onClick={() => void proveOnCreditcoin()}
+          >
+            {proveBusy ? "Proving…" : "Prove repayment"}
+          </button>
+        </div>
+        <p className={phaseClass} role="status" aria-live="polite">
+          [{phase}] {status}
+        </p>
+        {creditTx ? (
+          <p className="tx-line mono">
+            Creditcoin prove:{" "}
+            <a href={`${CREDITCOIN_EXPLORER}/tx/${creditTx}`} target="_blank" rel="noreferrer">
+              {creditTx}
+            </a>
+          </p>
+        ) : null}
+
+        {corsFallback ? (
+          <div className="cors-panel">
+            <h2 style={{ fontSize: "1.25rem", marginBottom: "0.5rem" }}>CLI proof fallback</h2>
+            <p>
+              The browser blocked the prover (CORS). Run this locally, then paste{" "}
+              <span className="mono">proof.json</span>.
+            </p>
+            <p className="mono">{cliCmd}</p>
+            <p className="mono tx-line">Sepolia tx: {repayTx ?? "-"}</p>
+            <textarea
+              className="input"
+              style={{ marginTop: "0.75rem" }}
+              placeholder="Paste proof.json from: npm run prove -- <tx> --json-out proof.json"
+              value={pasteJson}
+              onChange={(e) => setPasteJson(e.target.value)}
+              aria-label="Paste proof JSON"
+            />
+            <div className="actions">
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={!isConnected || !creditReady || !pasteJson.trim()}
+                onClick={() => void submitPastedProof()}
+              >
+                Submit pasted proof
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </section>
+
+      <section className="section" aria-labelledby="step-unlock">
+        <div className="section-head">
+          <h2 id="step-unlock">Unlock credit</h2>
+          <span className="section-kicker">Step 03</span>
+        </div>
+        <p>After a verified proof, borrow against the CreditLine and read Passport fields.</p>
+        <div className="actions">
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={!isConnected || !creditReady || phase !== "verified"}
+            onClick={() => void borrowOnCreditcoin()}
+          >
+            Borrow 10 mUSD
+          </button>
+        </div>
+        {borrowTx ? (
+          <p className="tx-line mono">
+            Creditcoin borrow:{" "}
+            <a href={`${CREDITCOIN_EXPLORER}/tx/${borrowTx}`} target="_blank" rel="noreferrer">
+              {borrowTx}
+            </a>
+          </p>
+        ) : null}
+
+        <dl className="kv" style={{ marginTop: "1.5rem" }}>
           <dt>Sepolia repay tx</dt>
           <dd>
             {repayTx || proof?.sepoliaTxHash ? (
@@ -554,7 +568,7 @@ export function Desk() {
                 {repayTx ?? proof?.sepoliaTxHash}
               </a>
             ) : (
-              "—"
+              "-"
             )}
           </dd>
           <dt>Creditcoin prove tx</dt>
@@ -564,34 +578,50 @@ export function Desk() {
                 {creditTx}
               </a>
             ) : (
-              "—"
+              "-"
             )}
           </dd>
           <dt>Attested block</dt>
-          <dd>{proof?.headerNumber ?? proof?.sepoliaBlockNumber ?? "—"}</dd>
+          <dd>{proof?.headerNumber ?? proof?.sepoliaBlockNumber ?? "-"}</dd>
           <dt>chainKey</dt>
           <dd>{proof?.chainKey ?? "1"}</dd>
-          <dt>Score (before → after)</dt>
+          <dt>Score (before to after)</dt>
           <dd>
-            {scoreBefore ?? "—"} →{" "}
-            {score !== undefined ? score.toString() : verified?.score ?? "—"}
+            {scoreBefore ?? "-"} {"->"}{" "}
+            {score !== undefined ? score.toString() : verified?.score ?? "-"}
           </dd>
           <dt>Borrow cap</dt>
-          <dd>{cap !== undefined ? `${formatEther(cap)} mUSD` : verified?.cap ?? "—"}</dd>
+          <dd>{cap !== undefined ? `${formatEther(cap)} mUSD` : verified?.cap ?? "-"}</dd>
           <dt>Passport NFT tokenId</dt>
-          <dd>{tokenId !== undefined ? tokenId.toString() : verified?.tokenId ?? "—"}</dd>
+          <dd>{tokenId !== undefined ? tokenId.toString() : verified?.tokenId ?? "-"}</dd>
           <dt>CreditLine liquidity</dt>
           <dd>
-            {lineBalance !== undefined ? `${formatEther(lineBalance)} mUSD` : "—"}
+            {lineBalance !== undefined ? `${formatEther(lineBalance)} mUSD` : "-"}
           </dd>
         </dl>
-        <p style={{ marginTop: "0.75rem" }}>
+        <p className="tx-line">
           Attestor dashboard:{" "}
           <a href={ATTESTOR_DASHBOARD} target="_blank" rel="noreferrer">
             {ATTESTOR_DASHBOARD}
           </a>
         </p>
       </section>
+
+      <footer className="footnote">
+        <h2>How Attestcoin verifies</h2>
+        <p>
+          Inclusion uses Merkle + continuity proofs via precompile{" "}
+          <span className="mono">0x…0FD2</span>. The Creditcoin contract checks{" "}
+          <span className="mono">receipt.status == 1</span> and that the log is{" "}
+          <span className="mono">LoanRepaid</span> from Sepolia MockMarket, not Chainlink, Pyth, or
+          a centralized backend.
+        </p>
+        <ul>
+          {SCORE_FORMULA.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      </footer>
     </main>
   );
 }

@@ -14,6 +14,7 @@
     "test:contracts:creditcoin": "cd packages/contracts-creditcoin && forge test -vv",
     "test:contracts": "npm run test:contracts:sepolia && npm run test:contracts:creditcoin",
     "prove": "npm run prove --workspace=packages/worker --",
+    "deploy:testnets": "bash scripts/deploy-all.sh",
     "dev:web": "npm run dev --workspace=apps/web",
     "build:web": "npm run build --workspace=apps/web"
   },

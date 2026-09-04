@@ -19,10 +19,23 @@ set -a
 source .env
 set +a
 
-: "${SEPOLIA_RPC_URL:?}"
-: "${CREDITCOIN_RPC_URL:?}"
-: "${SEPOLIA_PRIVATE_KEY:?}"
-: "${CREDITCOIN_PRIVATE_KEY:?}"
+: "${SEPOLIA_RPC_URL:?Set SEPOLIA_RPC_URL in .env}"
+: "${CREDITCOIN_RPC_URL:?Set CREDITCOIN_RPC_URL in .env}"
+
+if [[ -z "${SEPOLIA_PRIVATE_KEY:-}" || -z "${CREDITCOIN_PRIVATE_KEY:-}" \
+  || "$SEPOLIA_PRIVATE_KEY" == "0xREPLACE_ME" || "$CREDITCOIN_PRIVATE_KEY" == "0xREPLACE_ME" ]]; then
+  cat >&2 <<'ERR'
+ERROR: private keys are empty/placeholder in .env
+
+Open .env in an editor and set both lines (same funded demo key is fine):
+
+  SEPOLIA_PRIVATE_KEY=0xYOUR_KEY
+  CREDITCOIN_PRIVATE_KEY=0xYOUR_KEY
+
+Then re-run:  ./scripts/deploy-all.sh
+ERR
+  exit 1
+fi
 
 ADDR="$(cast wallet address --private-key "$SEPOLIA_PRIVATE_KEY")"
 echo "==> Deployer: $ADDR"

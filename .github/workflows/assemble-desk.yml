@@ -1,0 +1,25 @@
+name: Assemble Desk
+on:
+  push:
+    paths:
+      - '.assemble/desk-part-a.txt'
+      - '.assemble/desk-part-b.txt'
+      - '.github/workflows/assemble-desk.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - name: Assemble Desk.tsx
+        run: |
+          cat .assemble/desk-part-a.txt .assemble/desk-part-b.txt > apps/web/src/components/Desk.tsx
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web/src/components/Desk.tsx
+          git diff --cached --quiet || git commit -m "feat(web): assemble Desk.tsx from parts"
+          git push

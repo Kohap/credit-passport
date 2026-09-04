@@ -113,25 +113,7 @@ if [[ -z "$SEPOLIA_MOCK_USD" || -z "$SEPOLIA_MOCK_MARKET" ]]; then
 fi
 
 echo "==> Deploy Creditcoin Passport stack (trusted market=$SEPOLIA_MOCK_MARKET)"
-export SEPOLIA_MOCK_MARKET
-CC_OUT="$(
-  cd packages/contracts-creditcoin
-  forge script script/Deploy.s.sol:DeployCreditcoin \
-    --rpc-url "$CREDITCOIN_RPC_URL" \
-    --broadcast \
-    --skip-simulation \
-    --legacy \
-    --private-key "$CREDITCOIN_PRIVATE_KEY" \
-    -vv
-)"
-echo "$CC_OUT"
-CREDITCOIN_MOCK_USD="$(echo "$CC_OUT" | sed -n 's/.*CREDITCOIN_MOCK_USD[[:space:]]*//p' | tail -1 | tr -d '\r')"
-CREDITCOIN_CREDIT_SCORE="$(echo "$CC_OUT" | sed -n 's/.*CREDITCOIN_CREDIT_SCORE[[:space:]]*//p' | tail -1 | tr -d '\r')"
-CREDITCOIN_CREDIT_LINE="$(echo "$CC_OUT" | sed -n 's/.*CREDITCOIN_CREDIT_LINE[[:space:]]*//p' | tail -1 | tr -d '\r')"
-CREDITCOIN_PASSPORT_NFT="$(echo "$CC_OUT" | sed -n 's/.*CREDITCOIN_PASSPORT_NFT[[:space:]]*//p' | tail -1 | tr -d '\r')"
-CREDITCOIN_PASSPORT_ASC="$(echo "$CC_OUT" | sed -n 's/.*CREDITCOIN_PASSPORT_ASC[[:space:]]*//p' | tail -1 | tr -d '\r')"
-
-mkdir -p packages/contracts-sepolia/deployments packages/contracts-creditcoin/deployments
+mkdir -p packages/contracts-sepolia/deployments
 cat > packages/contracts-sepolia/deployments/sepolia.json <<EOF
 {
   "chainId": 11155111,
@@ -140,56 +122,19 @@ cat > packages/contracts-sepolia/deployments/sepolia.json <<EOF
   "deployer": "$ADDR"
 }
 EOF
-cat > packages/contracts-creditcoin/deployments/cc3-testnet.json <<EOF
-{
-  "chainId": 102031,
-  "MockUSD": "$CREDITCOIN_MOCK_USD",
-  "CreditScore": "$CREDITCOIN_CREDIT_SCORE",
-  "CreditLine": "$CREDITCOIN_CREDIT_LINE",
-  "PassportNFT": "$CREDITCOIN_PASSPORT_NFT",
-  "CreditPassportASC": "$CREDITCOIN_PASSPORT_ASC",
-  "trustedSepoliaMockMarket": "$SEPOLIA_MOCK_MARKET",
-  "deployer": "$ADDR"
-}
-EOF
-
-# Patch .env in place (macOS sed needs '' after -i; GNU sed does not)
-patch_env() {
-  local key="$1" val="$2"
-  if grep -q "^${key}=" .env; then
-    if sed --version >/dev/null 2>&1; then
-      sed -i "s|^${key}=.*|${key}=${val}|" .env
-    else
-      sed -i '' "s|^${key}=.*|${key}=${val}|" .env
-    fi
+# Persist Sepolia addresses so the Creditcoin helper can source them.
+if grep -q '^SEPOLIA_MOCK_USD=' .env; then
+  if sed --version >/dev/null 2>&1; then
+    sed -i "s|^SEPOLIA_MOCK_USD=.*|SEPOLIA_MOCK_USD=${SEPOLIA_MOCK_USD}|" .env
+    sed -i "s|^SEPOLIA_MOCK_MARKET=.*|SEPOLIA_MOCK_MARKET=${SEPOLIA_MOCK_MARKET}|" .env
   else
-    echo "${key}=${val}" >> .env
+    sed -i '' "s|^SEPOLIA_MOCK_USD=.*|SEPOLIA_MOCK_USD=${SEPOLIA_MOCK_USD}|" .env
+    sed -i '' "s|^SEPOLIA_MOCK_MARKET=.*|SEPOLIA_MOCK_MARKET=${SEPOLIA_MOCK_MARKET}|" .env
   fi
-}
-patch_env SEPOLIA_MOCK_USD "$SEPOLIA_MOCK_USD"
-patch_env SEPOLIA_MOCK_MARKET "$SEPOLIA_MOCK_MARKET"
-patch_env CREDITCOIN_MOCK_USD "$CREDITCOIN_MOCK_USD"
-patch_env CREDITCOIN_CREDIT_SCORE "$CREDITCOIN_CREDIT_SCORE"
-patch_env CREDITCOIN_CREDIT_LINE "$CREDITCOIN_CREDIT_LINE"
-patch_env CREDITCOIN_PASSPORT_NFT "$CREDITCOIN_PASSPORT_NFT"
-patch_env CREDITCOIN_PASSPORT_ASC "$CREDITCOIN_PASSPORT_ASC"
-patch_env NEXT_PUBLIC_SEPOLIA_MOCK_USD "$SEPOLIA_MOCK_USD"
-patch_env NEXT_PUBLIC_SEPOLIA_MOCK_MARKET "$SEPOLIA_MOCK_MARKET"
-patch_env NEXT_PUBLIC_CREDITCOIN_MOCK_USD "$CREDITCOIN_MOCK_USD"
-patch_env NEXT_PUBLIC_CREDITCOIN_CREDIT_SCORE "$CREDITCOIN_CREDIT_SCORE"
-patch_env NEXT_PUBLIC_CREDITCOIN_CREDIT_LINE "$CREDITCOIN_CREDIT_LINE"
-patch_env NEXT_PUBLIC_CREDITCOIN_PASSPORT_NFT "$CREDITCOIN_PASSPORT_NFT"
-patch_env NEXT_PUBLIC_CREDITCOIN_PASSPORT_ASC "$CREDITCOIN_PASSPORT_ASC"
-
-cat <<EOF
-
-==> Deploy complete. Paste this block back into the agent chat (or commit the deployments/*.json files):
-
-SEPOLIA_MOCK_USD=$SEPOLIA_MOCK_USD
-SEPOLIA_MOCK_MARKET=$SEPOLIA_MOCK_MARKET
-CREDITCOIN_MOCK_USD=$CREDITCOIN_MOCK_USD
-CREDITCOIN_CREDIT_SCORE=$CREDITCOIN_CREDIT_SCORE
-CREDITCOIN_CREDIT_LINE=$CREDITCOIN_CREDIT_LINE
-CREDITCOIN_PASSPORT_NFT=$CREDITCOIN_PASSPORT_NFT
-CREDITCOIN_PASSPORT_ASC=$CREDITCOIN_PASSPORT_ASC
-EOF
+else
+  echo "SEPOLIA_MOCK_USD=${SEPOLIA_MOCK_USD}" >> .env
+  echo "SEPOLIA_MOCK_MARKET=${SEPOLIA_MOCK_MARKET}" >> .env
+fi
+export SEPOLIA_MOCK_USD SEPOLIA_MOCK_MARKET
+bash "$ROOT/scripts/deploy-creditcoin.sh"
+exit 0

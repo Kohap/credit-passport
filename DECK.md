@@ -4,12 +4,12 @@ Paste into Gamma / Google slides. Speak from the notes under each slide.
 
 ---
 
-## Slide 1 — Title
+## Slide 1 — Title (first 15s: name the mock)
 
 **Credit Passport**  
-Prove Sepolia repayments on Creditcoin with Attestcoin. Unlock credit. Mint a soulbound Passport.
+MockMarket on Sepolia → Attestcoin verify → score / cap / Passport on Creditcoin.
 
-**Notes:** BUIDL CTC 2026 Fall, DeFi track. Live desk: https://kohap.github.io/credit-passport/. One product: Attestcoin readability → underwriting outcome.
+**Notes:** BUIDL CTC 2026 · DeFi / Attestcoin. Say immediately: “MockMarket is the source fixture. The Attestcoin path is real. Next source is a live Sepolia lending-pool repay event.” One MetaMask EOA on both chains. Do not submit a Pages 404 as the demo video.
 
 ---
 
@@ -18,51 +18,50 @@ Prove Sepolia repayments on Creditcoin with Attestcoin. Unlock credit. Mint a so
 Cross-chain credit today trusts bridges, oracles, or backends.  
 A repayment on Ethereum is invisible to Creditcoin unless someone can lie.
 
-**Notes:** Judges care about depth of Attestcoin use. We refuse “indexer says repaid.” Destination chain must verify the foreign tx itself.
+**Notes:** Judges score Attestcoin depth. We refuse “indexer says repaid.” Destination chain must verify the foreign tx itself.
 
 ---
 
-## Slide 3 — Insight
+## Slide 3 — Insight (must-say: 0xFD2 + receiptStatus)
 
 Attestcoin lets Creditcoin contracts **read** foreign-chain txs with Merkle + continuity proofs.  
 Verification and business logic run in **one** Creditcoin transaction.
 
-**Notes:** Precompile **`0x0000000000000000000000000000000000000FD2`** (`verifyAndEmit`). ASC then requires **`receiptStatus == 1`** because the precompile does not check success — failed txs must not raise credit. Also: emitter == Sepolia MockMarket, borrower match, replay via query id.
+**Notes:** Precompile **`0x0000000000000000000000000000000000000FD2`** (`verifyAndEmit`). ASC requires **`receiptStatus == 1`** (precompile does not check success). Also: emitter == Sepolia MockMarket, borrower match, replay via query id. If a judge cannot open a live `proveRepayment` tx, you did not integrate Attestcoin.
 
 ---
 
-## Slide 4 — Product flow
+## Slide 4 — 90s loop (prize first)
 
-1. Borrow / repay on Sepolia MockMarket → `LoanRepaid`  
-2. Wait until height attested (~15s lag)  
-3. ProofBuilder → `getProof`  
-4. `CreditPassportASC.proveRepayment` → score ↑, cap ↑, soulbound PASS minted  
-5. Optional: borrow 10 mUSD on CreditLine
+1. Same wallet: faucet → open → repay on Sepolia MockMarket  
+2. Wait until height attested  
+3. `npm run prove -- <tx> --submit` (CLI = source of truth; Pages optional)  
+4. Score ↑, borrow cap ↑, soulbound PASS minted  
+5. If CreditLine funded: borrow 10 mUSD — else skip and say “cap + passport”
 
-**Notes:** Demo phases in the UI: waiting_source → waiting_attestation → generating_proof → submitting → verified. chainKey `1` = Sepolia on CC3 (≠ chainId `11155111`).
+**Notes:** chainKey `1` = Sepolia on CC3 (≠ chainId `11155111`). Record the first successful prove the hour it happens.
 
 ---
 
-## Slide 5 — Why this track / why Attestcoin
+## Slide 5 — Why this track
 
 Depth of Attestcoin use is the score.  
-We do **not** mock `verifyAndEmit` in the demo path. We do **not** use Chainlink/Pyth as truth.
+We do **not** mock `verifyAndEmit`. We do **not** use Chainlink/Pyth as truth.
 
-**Notes:** Live ASC: `0xc5c9B5A4842B20D945aAD6824A58Afdbb78fecbb`. Worker prints a HACKATHON PROOF block with both explorer URLs after `--submit`.
-
----
-
-## Slide 6 — Architecture
-
-Sepolia contracts (signal) → ProofBuilder (browser or CLI) → Creditcoin ASC (value).  
-See `docs/ARCHITECTURE.md`.
-
-**Notes:** Static Pages cannot host a Node prover — proof is in-browser with CORS fallback to `npm run prove`. CreditLine needs mUSD liquidity (`scripts/fund-creditline.sh`).
+**Notes:** Live ASC: `0xc5c9B5A4842B20D945aAD6824A58Afdbb78fecbb`. Show both explorer URLs from the HACKATHON PROOF block. Win the loop this week; CEIP is the post-place story.
 
 ---
 
-## Slide 7 — 90s demo + ask
+## Slide 6 — Architecture + one CREATE footnote
 
-Connect → Add networks → Faucet → Open → Repay → Prove → show score/cap/NFT + explorers → Borrow.
+Sepolia MockMarket (signal) → ProofBuilder CLI/UI → Creditcoin ASC (value).
 
-**Notes:** Ask: live Sepolia + CC3 deploy; next season = more source events, batch proofs (≤10), real credit partners. Limitations: readability only, attestation lag, mocks.
+**Notes:** Footnote once: “Same CREATE hex on two chains = nonce coincidence. Different networks.” Then ignore. Static Pages cannot host a Node prover — CORS → CLI Plan B. Freeze: no extra chains, AI, mainnet, writability, new scoring, token, Telegram, redesign.
+
+---
+
+## Slide 7 — Ask (after proof links exist)
+
+Ask: Attestcoin depth now; next = replace MockMarket with Aave/Compound-style repay events (do not build that this week).
+
+**Notes:** Demo URL only if Connect Wallet loads. Prototype video = successful CLI (or Desk) loop + explorer tabs. Limitations: readability only, attestation lag, mocks.

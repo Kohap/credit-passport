@@ -211,7 +211,7 @@ export function Desk() {
       chainId: SEPOLIA_CHAIN_ID,
     });
     setRepayTx(hash);
-    setStatus(`Repay tx ${hash} — next: prove on Creditcoin.`);
+    setStatus(`Repay tx ${hash}. Next: prove on Creditcoin.`);
   }
 
   async function submitProveRepayment(payload: ProofPayload) {
@@ -372,7 +372,7 @@ export function Desk() {
             Credit Passport
           </Link>
           <p className="desk-top-lede">
-            Prove Sepolia repayment on Creditcoin — same wallet, Attestcoin verification.
+            Prove Sepolia repayment on Creditcoin. Same wallet, Attestcoin verification.
           </p>
         </div>
         <div className="hero-actions">
@@ -508,7 +508,7 @@ export function Desk() {
               <span className="mono">proof.json</span>.
             </p>
             <p className="mono">{cliCmd}</p>
-            <p className="mono tx-line">Sepolia tx: {repayTx ?? "—"}</p>
+            <p className="mono tx-line">Sepolia tx: {repayTx ?? "-"}</p>
             <textarea
               className="input"
               style={{ marginTop: "0.75rem" }}
@@ -568,7 +568,7 @@ export function Desk() {
                 {repayTx ?? proof?.sepoliaTxHash}
               </a>
             ) : (
-              "—"
+              "-"
             )}
           </dd>
           <dt>Creditcoin prove tx</dt>
@@ -578,25 +578,25 @@ export function Desk() {
                 {creditTx}
               </a>
             ) : (
-              "—"
+              "-"
             )}
           </dd>
           <dt>Attested block</dt>
-          <dd>{proof?.headerNumber ?? proof?.sepoliaBlockNumber ?? "—"}</dd>
+          <dd>{proof?.headerNumber ?? proof?.sepoliaBlockNumber ?? "-"}</dd>
           <dt>chainKey</dt>
           <dd>{proof?.chainKey ?? "1"}</dd>
-          <dt>Score (before → after)</dt>
+          <dt>Score (before to after)</dt>
           <dd>
-            {scoreBefore ?? "—"} →{" "}
-            {score !== undefined ? score.toString() : verified?.score ?? "—"}
+            {scoreBefore ?? "-"} {"->"}{" "}
+            {score !== undefined ? score.toString() : verified?.score ?? "-"}
           </dd>
           <dt>Borrow cap</dt>
-          <dd>{cap !== undefined ? `${formatEther(cap)} mUSD` : verified?.cap ?? "—"}</dd>
+          <dd>{cap !== undefined ? `${formatEther(cap)} mUSD` : verified?.cap ?? "-"}</dd>
           <dt>Passport NFT tokenId</dt>
-          <dd>{tokenId !== undefined ? tokenId.toString() : verified?.tokenId ?? "—"}</dd>
+          <dd>{tokenId !== undefined ? tokenId.toString() : verified?.tokenId ?? "-"}</dd>
           <dt>CreditLine liquidity</dt>
           <dd>
-            {lineBalance !== undefined ? `${formatEther(lineBalance)} mUSD` : "—"}
+            {lineBalance !== undefined ? `${formatEther(lineBalance)} mUSD` : "-"}
           </dd>
         </dl>
         <p className="tx-line">
@@ -613,7 +613,7 @@ export function Desk() {
           Inclusion uses Merkle + continuity proofs via precompile{" "}
           <span className="mono">0x…0FD2</span>. The Creditcoin contract checks{" "}
           <span className="mono">receipt.status == 1</span> and that the log is{" "}
-          <span className="mono">LoanRepaid</span> from Sepolia MockMarket — not Chainlink, Pyth, or
+          <span className="mono">LoanRepaid</span> from Sepolia MockMarket, not Chainlink, Pyth, or
           a centralized backend.
         </p>
         <ul>

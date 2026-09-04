@@ -10,10 +10,12 @@ Repayment lives on Sepolia; credit decisions live on Creditcoin. Attestcoin is t
 
 ## Live app (convenience) vs proof (source of truth)
 
-- **Desk:** https://kohap.github.io/credit-passport/ — only submit this URL once it loads **Connect wallet** (not README/404). Local: `npm run dev:web`.
-- **Proof of Attestcoin:** `npm run prove -- <sepoliaTx> --submit` (CLI). Browser prove can CORS-fail; CLI is what you record if Pages is flaky.
+- **Desk (primary):** [https://web-mauve-five-21.vercel.app/](https://web-mauve-five-21.vercel.app/) — use this for judges once **Connect wallet** loads.
+- **GitHub Pages (backup):** https://kohap.github.io/credit-passport/ — only if it serves the Next app, not the README.
+- Local: `npm run dev:web`
+- **Proof of Attestcoin:** `npm run prove -- <sepoliaTx> --submit` (CLI). Browser prove can CORS-fail; CLI is source of truth for the video if needed.
 
-> Pages: **Settings → Pages → Source: GitHub Actions**. Do not put a 404 in DoraHacks “Prototype Demo Video URL.”
+> DoraHacks “Prototype Demo Video URL” = your successful prove recording + explorer tabs — not a 404 page.
 
 ## Hackathon proof (fill after live E2E)
 

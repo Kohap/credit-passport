@@ -9,7 +9,7 @@ Paste into Gamma / Google slides. Speak from the notes under each slide.
 **Credit Passport**  
 MockMarket on Sepolia → Attestcoin verify → score / cap / Passport on Creditcoin.
 
-**Notes:** BUIDL CTC 2026 · DeFi / Attestcoin. Say immediately: “MockMarket is the source fixture. The Attestcoin path is real. Next source is a live Sepolia lending-pool repay event.” One MetaMask EOA on both chains. Do not submit a Pages 404 as the demo video.
+**Notes:** BUIDL CTC 2026 · DeFi / Attestcoin. Say immediately: “MockMarket is the source fixture. The Attestcoin path is real. Next source is a live Sepolia lending-pool repay event.” One MetaMask EOA on both chains. Live desk: https://web-mauve-five-21.vercel.app/ (Connect wallet). Do not submit a 404 as the demo video.
 
 ---
 

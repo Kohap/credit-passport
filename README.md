@@ -2,21 +2,73 @@
 
 **BUIDL CTC 2026 Fall · DeFi track · Attestcoin Protocol**
 
-Prove that a borrower repaid (or closed) a loan on **Ethereum Sepolia**. Unlock a credit line, raise a borrow cap, and mint a soulbound **Credit Passport** NFT on **Creditcoin CC3 Testnet** — only after **Attestcoin** cryptographically verifies the source-chain transaction and its `LoanRepaid` event logs.
+Credit Passport proves a borrower repaid a loan on **Ethereum Sepolia**, then unlocks a credit line, raises a borrow cap, and mints a soulbound **Credit Passport** NFT on **Creditcoin CC3 Testnet**. Underwriting only advances after **Attestcoin** cryptographically verifies the source-chain transaction and its `LoanRepaid` event — not after a bridge, oracle, or “trust me” backend.
 
-This is a **cross-chain underwriting primitive**, not a full lending market.
+## Why Attestcoin is required
 
-## Why Attestcoin is required (not optional)
+Repayment lives on Sepolia; credit decisions live on Creditcoin. Attestcoin is the only on-chain source of truth that the Sepolia tx existed, succeeded (`receiptStatus == 1`), and emitted our event before score / cap / NFT update.
 
-Repayment happens on Sepolia. Credit decisions happen on Creditcoin. Attestcoin is the **source of truth** that the Sepolia tx existed, succeeded, and emitted our event:
+## Live app
 
-1. User repays on Sepolia `MockMarket` → `LoanRepaid(...)`.
-2. Worker/UI waits until that height is attested (`ProofBuilder.waitUntilHeightAttested`).
-3. Hosted prover returns Merkle + continuity proofs (`getProof`).
-4. `CreditPassportASC.proveRepayment` on Creditcoin calls precompile **`0x0000000000000000000000000000000000000FD2`** `verifyAndEmit`.
-5. ASC decodes `txBytes` with official `EvmV1Decoder`, **requires `receiptStatus == 1`**, requires log emitter == trusted Sepolia MockMarket, requires borrower match, then updates score / cap / NFT.
+**https://kohap.github.io/credit-passport/** — static Next.js desk (GitHub Pages).  
+Local: `npm run dev:web` → http://localhost:3000
 
-No Chainlink, Pyth, or centralized “trust me” backend decides the repayment.
+> First-time Pages setup: repo **Settings → Pages → Source: GitHub Actions**. Push to `main` runs `.github/workflows/pages.yml`.
+
+## Hackathon proof (fill after live E2E)
+
+| Artifact | Value |
+| --- | --- |
+| Sepolia `LoanRepaid` tx | **TBD** |
+| Creditcoin `proveRepayment` tx | **TBD** |
+| Passport tokenId | **TBD** |
+
+Paste the worker’s `HACKATHON PROOF` block here after `npm run prove -- <tx> --submit`.
+
+## Deployed addresses
+
+Demo deployer: [`0x3953A716DA94e51EAFE6F2224379332B0BEEE5EA`](https://creditcoin-testnet.blockscout.com/address/0x3953A716DA94e51EAFE6F2224379332B0BEEE5EA)
+
+| Contract | Network | Address |
+| --- | --- | --- |
+| MockUSD | Sepolia | [`0x5D695DD7bd61D22731973F32e84c8D797FEed701`](https://sepolia.etherscan.io/address/0x5D695DD7bd61D22731973F32e84c8D797FEed701) |
+| MockMarket | Sepolia | [`0xEd2a52496044771bE1a3583f2d7061da33427a6a`](https://sepolia.etherscan.io/address/0xEd2a52496044771bE1a3583f2d7061da33427a6a) |
+| MockUSD | Creditcoin | [`0x5D695DD7bd61D22731973F32e84c8D797FEed701`](https://creditcoin-testnet.blockscout.com/address/0x5D695DD7bd61D22731973F32e84c8D797FEed701) |
+| CreditScore | Creditcoin | [`0xEd2a52496044771bE1a3583f2d7061da33427a6a`](https://creditcoin-testnet.blockscout.com/address/0xEd2a52496044771bE1a3583f2d7061da33427a6a) |
+| CreditLine | Creditcoin | [`0xFA2f6AD61e9A1c44eD03509f386DE4DDa5ecfa7e`](https://creditcoin-testnet.blockscout.com/address/0xFA2f6AD61e9A1c44eD03509f386DE4DDa5ecfa7e) |
+| PassportNFT | Creditcoin | [`0x3E6CB0dC03e72E57ac91c8D74cF2246079F1B09e`](https://creditcoin-testnet.blockscout.com/address/0x3E6CB0dC03e72E57ac91c8D74cF2246079F1B09e) |
+| CreditPassportASC | Creditcoin | [`0xc5c9B5A4842B20D945aAD6824A58Afdbb78fecbb`](https://creditcoin-testnet.blockscout.com/address/0xc5c9B5A4842B20D945aAD6824A58Afdbb78fecbb) |
+
+JSON: `packages/*/deployments/*.json`. Same hex across chains is a CREATE-address coincidence (matching deployer nonces) — different networks.
+
+## 90-second click path
+
+1. Open the live app → **Connect** → **Add Sepolia + CC3 to wallet**.
+2. **Faucet** mUSD on Sepolia → **Open loan** → **Repay**.
+3. **Prove on Creditcoin** — watch phases: `waiting_source` → `waiting_attestation` → `generating_proof` → `submitting` → `verified`.
+4. Note score before/after, borrow cap, passport tokenId + explorer links.
+5. **Borrow on Creditcoin** (10 mUSD). If it fails with no liquidity: `bash scripts/fund-creditline.sh`.
+
+## CLI fallback (CORS / offline proof)
+
+If the browser prover is blocked:
+
+```bash
+npm run prove -- 0xSEPOLIA_TX_HASH --json-out proof.json
+npm run prove -- 0xSEPOLIA_TX_HASH --submit --claim 0xYourAddress
+```
+
+Or paste `proof.json` into the Desk “CORS fallback” panel and submit from the UI.
+
+## Reproduce one proof
+
+```bash
+cp .env.example .env   # set SEPOLIA_* + CREDITCOIN_* keys (funded)
+npm install
+bash scripts/fund-creditline.sh          # once — mUSD liquidity on CreditLine
+bash scripts/demo-e2e.sh                 # faucet → open → repay → prove --submit
+# copy HACKATHON PROOF block into the table above
+```
 
 ## Networks
 
@@ -28,6 +80,7 @@ No Chainlink, Pyth, or centralized “trust me” backend decides the repayment.
 - Explorer: https://creditcoin-testnet.blockscout.com/
 - Attestor dashboard: https://dashboard.cc3-testnet.creditcoin.network/
 - Proof builder: https://prover.cc3-testnet.creditcoin.network (fallback: `https://proof-gen-api.cc3-testnet.creditcoin.network`)
+- Query verifier precompile: `0x0000000000000000000000000000000000000FD2`
 - ChainInfo precompile: `0x…0fd3`
 
 **Pitfall:** `chainKey` ≠ EVM `chainId`. Sepolia’s chainKey on CC3 testnet is `1`.
@@ -40,23 +93,15 @@ No Chainlink, Pyth, or centralized “trust me” backend decides the repayment.
 - Total score capped at **100**
 - `borrowCap = 100 mUSD + (score × 2 mUSD)`
 
-## Deployed addresses
+## Attestcoin step-by-step (judge checklist)
 
-Demo deployer: `0x3953A716DA94e51EAFE6F2224379332B0BEEE5EA`
+1. User repays on Sepolia `MockMarket` → `LoanRepaid(...)`.
+2. Worker/UI waits until that height is attested (`ProofBuilder.waitUntilHeightAttested`).
+3. Hosted prover returns Merkle + continuity proofs (`getProof`).
+4. `CreditPassportASC.proveRepayment` calls precompile **`0x…0FD2`** `verifyAndEmit`.
+5. ASC decodes `txBytes` with official `EvmV1Decoder`, **requires `receiptStatus == 1`**, requires log emitter == trusted Sepolia MockMarket, requires borrower match, then updates score / cap / NFT.
 
-| Contract | Network | Address |
-| --- | --- | --- |
-| MockUSD | Sepolia | [`0x5D695DD7bd61D22731973F32e84c8D797FEed701`](https://sepolia.etherscan.io/address/0x5D695DD7bd61D22731973F32e84c8D797FEed701) |
-| MockMarket | Sepolia | [`0xEd2a52496044771bE1a3583f2d7061da33427a6a`](https://sepolia.etherscan.io/address/0xEd2a52496044771bE1a3583f2d7061da33427a6a) |
-| MockUSD | Creditcoin | [`0x5D695DD7bd61D22731973F32e84c8D797FEed701`](https://creditcoin-testnet.blockscout.com/address/0x5D695DD7bd61D22731973F32e84c8D797FEed701) |
-| CreditScore | Creditcoin | [`0xEd2a52496044771bE1a3583f2d7061da33427a6a`](https://creditcoin-testnet.blockscout.com/address/0xEd2a52496044771bE1a3583f2d7061da33427a6a) |
-| CreditLine | Creditcoin | [`0xFA2f6AD61e9A1c44eD03509f386DE4DDa5ecfa7e`](https://creditcoin-testnet.blockscout.com/address/0xFA2f6AD61e9A1c44eD03509f386DE4DDa5ecfa7e) |
-| PassportNFT | Creditcoin | [`0x3E6CB0dC03e72E57ac91c8D74cF2246079F1B09e`](https://creditcoin-testnet.blockscout.com/address/0x3E6CB0dC03e72E57ac91c8D74cF2246079F1B09e) |
-| CreditPassportASC | Creditcoin | [`0xc5c9B5A4842B20D945aAD6824A58Afdbb78fecbb`](https://creditcoin-testnet.blockscout.com/address/0xc5c9B5A4842B20D945aAD6824A58Afdbb78fecbb) |
-
-JSON: `packages/*/deployments/*.json`.
-
-> Same hex for Sepolia MockUSD ↔ CC3 MockUSD (and Sepolia MockMarket ↔ CC3 CreditScore) is a CREATE-address coincidence from matching deployer nonces — different chains.
+No Chainlink, Pyth, or centralized backend decides the repayment.
 
 ## Repo layout
 
@@ -65,8 +110,9 @@ packages/contracts-sepolia/     MockUSD + MockMarket (LoanRepaid)
 packages/contracts-creditcoin/  ASC + score + line + soulbound NFT
 packages/worker/                prove.ts CLI (@gluwa/usc-sdk)
 apps/web/                       Next.js dual-chain desk
+scripts/fund-creditline.sh     mint/transfer mUSD → CreditLine
+scripts/demo-e2e.sh             full faucet → prove path
 docs/ARCHITECTURE.md
-scripts/demo.sh
 DECK.md
 ```
 
@@ -108,56 +154,47 @@ Creditcoin uses `forge create` (not `forge script`) because CC3 Substrate EVM om
 ### Faucets
 
 - **Sepolia ETH:** public Sepolia faucets.
-- **tCTC:** Creditcoin Discord faucet channels (join https://discord.gg/creditcoin — use the CC3 testnet faucet channel; ask mods if the channel name moved).
-- **mUSD:** `MockUSD.faucet()` on Sepolia from the UI.
+- **tCTC:** Creditcoin Discord faucet (https://discord.gg/creditcoin — CC3 testnet channel).
+- **mUSD:** `MockUSD.faucet()` on Sepolia from the UI; CreditLine liquidity via `bash scripts/fund-creditline.sh`.
 
 ## Worker proof CLI
 
 ```bash
-# After a Sepolia repay tx:
 npm run prove -- 0xSEPOLIA_TX_HASH --json-out /tmp/proof.json
-# Optional broadcast (needs CREDITCOIN_PRIVATE_KEY + CREDITCOIN_PASSPORT_ASC):
 npm run prove -- 0xSEPOLIA_TX_HASH --submit --claim 0xYourAddress
 ```
 
-## Web UI
+`CREDITCOIN_PASSPORT_ASC` defaults to `0xc5c9B5A4842B20D945aAD6824A58Afdbb78fecbb`.
 
-Local:
-
-```bash
-npm run dev:web
-# http://localhost:3000
-```
-
-**GitHub Pages (static):** https://kohap.github.io/credit-passport/
-
-Deploys automatically on every push to `main` (Actions → Pages). First time: repo **Settings → Pages → Source: GitHub Actions**.
-
-Proof building runs in the browser (Pages has no Node API). If the proof builder blocks CORS, use the worker CLI instead:
+## Web UI / Pages
 
 ```bash
-npm run prove -- 0xSEPOLIA_TX_HASH --json-out /tmp/proof.json
+npm run dev:web          # local at /
+npm run build:pages      # static export with basePath /credit-passport
 ```
 
-Demo path (&lt; 90s): connect → Add networks → Faucet → Open loan → Repay → Prove on Creditcoin → see score / cap / NFT.
-
-## Attestcoin step-by-step (judge checklist)
-
-1. Source event is **not** a generic ERC-20 `Transfer`; it is `LoanRepaid(borrower, loanId, amount, remainingDebt, timestamp)`.
-2. `waitUntilHeightAttested(1, blockNumber)` — attestation intentionally lags head (~15s) to avoid reorgs.
-3. `getProof(txHash)` → `txBytes`, merkle siblings, continuity roots.
-4. On-chain: `verifyAndEmit` @ `0xFD2`.
-5. ASC requires `receiptStatus == 1` (precompile does **not** check success).
-6. ASC requires log emitter == immutable Sepolia MockMarket.
-7. Replay protection: query id from `(chainKey, blockHeight, txIndex)`.
-8. Business logic in the **same transaction**: score → cap → soulbound NFT.
+Proof building runs in the browser (Pages has no Node API). Addresses are baked into `apps/web/src/config/networks.ts` — no GitHub Actions secrets required to build.
 
 ## Limitations
 
-- Attestcoin **readability only** this season (no writability / no sending Sepolia txs through Attestcoin).
+- Attestcoin **readability only** this season (no writability).
 - Attestation lag; proof gen can take minutes if the height is not yet attested.
 - Mock loans / mock USD — not production underwriting.
-- Live `0xFD2` verification only works on Creditcoin CC3 testnet (unit tests mock / skip the precompile path).
+- Live `0xFD2` verification only works on Creditcoin CC3 testnet (unit tests mock the precompile).
+
+## If GitHub Actions Pages still fails
+
+```bash
+# locally
+npm install                    # refreshes package-lock.json
+npm run build:tokens           # if present
+GITHUB_PAGES=true npm run build:pages
+ls apps/web/out/.nojekyll apps/web/out/index.html
+
+# on GitHub
+# Settings → Pages → Source: GitHub Actions
+# Actions → Deploy GitHub Pages → Re-run failed jobs
+```
 
 ## Attribution
 

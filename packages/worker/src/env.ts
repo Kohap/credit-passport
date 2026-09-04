@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+const ASC_DEFAULT = "0xc5c9B5A4842B20D945aAD6824A58Afdbb78fecbb";
+
 const envSchema = z.object({
   SEPOLIA_RPC_URL: z.string().url(),
   CREDITCOIN_RPC_URL: z
@@ -14,7 +16,7 @@ const envSchema = z.object({
   CREDITCOIN_PASSPORT_ASC: z
     .string()
     .regex(/^0x[0-9a-fA-F]{40}$/)
-    .optional(),
+    .default(ASC_DEFAULT),
 });
 
 export type Env = z.infer<typeof envSchema>;

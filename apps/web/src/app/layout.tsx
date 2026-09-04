@@ -26,7 +26,7 @@ const plexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: "Credit Passport",
   description:
-    "Prove Sepolia repayments on Creditcoin via Attestcoin — unlock a credit line and mint a soulbound Passport.",
+    "Prove a Sepolia repayment on Creditcoin with Attestcoin — unlock a credit line and mint a soulbound Passport.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -48,6 +48,14 @@ type ProvePhase =
   | "verified"
   | "error";
 
+type ActiveLoan = {
+  id: bigint;
+  principal: bigint;
+  debt: bigint;
+};
+
+const MAX_LOANS_TO_SHOW = 100n;
+
 function isConfigured(addr: string): boolean {
   return /^0x[0-9a-fA-F]{40}$/.test(addr) && !/^0x0+$/.test(addr.slice(2));
 }
@@ -112,6 +120,10 @@ export function Desk() {
   const [faucetBusy, setFaucetBusy] = useState(false);
   const [openLoanBusy, setOpenLoanBusy] = useState(false);
   const [repayBusy, setRepayBusy] = useState(false);
+  const [repayAll, setRepayAll] = useState(false);
+  const [activeLoans, setActiveLoans] = useState<ActiveLoan[]>([]);
+  const [activeLoansBusy, setActiveLoansBusy] = useState(false);
+  const [loanRefresh, setLoanRefresh] = useState(0);
   const [verified, setVerified] = useState<{
     score: string;
     cap: string;
@@ -165,6 +177,68 @@ export function Desk() {
     chainId: CREDITCOIN_CHAIN_ID,
     query: { enabled: creditReady },
   });
+
+  const { data: nextLoanId, refetch: refetchLoanCounter } = useReadContract({
+    address: addresses.sepoliaMockMarket as Address,
+    abi: mockMarketAbi,
+    functionName: "nextLoanId",
+    chainId: SEPOLIA_CHAIN_ID,
+    query: { enabled: Boolean(address) && sepoliaReady },
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadActiveLoans() {
+      if (!address || !sepoliaClient || !nextLoanId || nextLoanId <= 1n) {
+        setActiveLoans([]);
+        setActiveLoansBusy(false);
+        return;
+      }
+      setActiveLoansBusy(true);
+      try {
+        const firstLoanId =
+          nextLoanId > MAX_LOANS_TO_SHOW + 1n ? nextLoanId - MAX_LOANS_TO_SHOW : 1n;
+        const ids = Array.from(
+          { length: Number(nextLoanId - firstLoanId) },
+          (_, index) => firstLoanId + BigInt(index),
+        );
+        const loans = await Promise.all(
+          ids.map(async (id) => {
+            const [borrower, principal, debt, active] = await sepoliaClient.readContract({
+              address: addresses.sepoliaMockMarket as Address,
+              abi: mockMarketAbi,
+              functionName: "loans",
+              args: [id],
+            });
+            return { id, borrower, principal, debt, active };
+          }),
+        );
+        if (!cancelled) {
+          setActiveLoans(
+            loans
+              .filter(
+                (loan) =>
+                  loan.active && loan.borrower.toLowerCase() === address.toLowerCase(),
+              )
+              .map(({ id, principal, debt }) => ({ id, principal, debt })),
+          );
+        }
+      } catch {
+        if (!cancelled) setActiveLoans([]);
+      } finally {
+        if (!cancelled) setActiveLoansBusy(false);
+      }
+    }
+    void loadActiveLoans();
+    return () => {
+      cancelled = true;
+    };
+  }, [address, nextLoanId, sepoliaClient, loanRefresh]);
+
+  const activeLoanDebt = useMemo(
+    () => activeLoans.reduce((total, loan) => total + loan.debt, 0n),
+    [activeLoans],
+  );
 
   const ensureSepolia = useCallback(async () => {
     if (chainId !== SEPOLIA_CHAIN_ID) {
@@ -352,6 +426,8 @@ export function Desk() {
         throw new Error("Loan opened, but its ID was not found in the receipt.");
       }
       setLoanId(openedLoanId.toString());
+      setLoanRefresh((current) => current + 1);
+      await refetchLoanCounter();
       setStatus(`Loan #${openedLoanId} confirmed. Repay this loan next.`);
     } catch (err: unknown) {
       setStatus(err instanceof Error ? err.message : String(err));
@@ -366,28 +442,51 @@ export function Desk() {
       await ensureSepolia();
       if (!address) throw new Error("Connect wallet first.");
       if (!sepoliaClient) throw new Error("Sepolia RPC unavailable.");
-      const value = parseEther(amount || "100");
-      if (!loanId.trim()) {
-        throw new Error("Open a loan first. Its confirmed loan ID will appear here automatically.");
-      }
-      const id = BigInt(loanId);
       const request = await selectedWalletRequest();
-      const loan = await sepoliaClient.readContract({
-        address: addresses.sepoliaMockMarket as Address,
-        abi: mockMarketAbi,
-        functionName: "loans",
-        args: [id],
-      });
-      const [borrower, , debt, active] = loan;
-      if (!active) {
-        throw new Error(`Loan #${id} is not active. Open a loan before repaying.`);
-      }
-      if (borrower.toLowerCase() !== address.toLowerCase()) {
-        throw new Error(`Loan #${id} belongs to a different wallet.`);
-      }
-      if (value > debt) {
+      const requestedIds = repayAll
+        ? activeLoans.map((loan) => loan.id)
+        : loanId.trim()
+          ? [BigInt(loanId)]
+          : [];
+      if (!requestedIds.length) {
         throw new Error(
-          `Loan #${id} has ${formatEther(debt)} mUSD remaining. Lower the repayment amount.`,
+          repayAll
+            ? "No active loans are available to repay."
+            : "Select an active loan or enter its loan ID before repaying.",
+        );
+      }
+      const requestedAmount = repayAll ? 0n : parseEther(amount || "100");
+      const currentLoans = await Promise.all(
+        requestedIds.map(async (id) => {
+          const [borrower, principal, debt, active] = await sepoliaClient.readContract({
+            address: addresses.sepoliaMockMarket as Address,
+            abi: mockMarketAbi,
+            functionName: "loans",
+            args: [id],
+          });
+          if (!active) throw new Error(`Loan #${id} is not active.`);
+          if (borrower.toLowerCase() !== address.toLowerCase()) {
+            throw new Error(`Loan #${id} belongs to a different wallet.`);
+          }
+          const value = repayAll ? debt : requestedAmount;
+          if (value > debt) {
+            throw new Error(
+              `Loan #${id} has ${formatEther(debt)} mUSD remaining. Lower the repayment amount.`,
+            );
+          }
+          return { id, principal, debt, value };
+        }),
+      );
+      const total = currentLoans.reduce((sum, loan) => sum + loan.value, 0n);
+      const balance = await sepoliaClient.readContract({
+        address: addresses.sepoliaMockUsd as Address,
+        abi: mockUsdAbi,
+        functionName: "balanceOf",
+        args: [address],
+      });
+      if (balance < total) {
+        throw new Error(
+          `Need ${formatEther(total)} mUSD to repay this selection; wallet balance is ${formatEther(balance)} mUSD.`,
         );
       }
       const allowance = await sepoliaClient.readContract({
@@ -397,15 +496,17 @@ export function Desk() {
         args: [address, addresses.sepoliaMockMarket as Address],
       });
 
-      if (allowance < value) {
-        setStatus("Confirm mUSD approval in your wallet, then wait for Sepolia confirmation.");
+      if (allowance < total) {
+        setStatus(
+          `Confirm mUSD approval for ${formatEther(total)} mUSD, then wait for Sepolia confirmation.`,
+        );
         const approvalHash = await sendPopulatedWrite({
           publicClient: sepoliaClient,
           account: address,
           address: addresses.sepoliaMockUsd as Address,
           abi: mockUsdAbi,
           functionName: "approve",
-          functionArgs: [addresses.sepoliaMockMarket as Address, value],
+          functionArgs: [addresses.sepoliaMockMarket as Address, total],
           chainId: SEPOLIA_CHAIN_ID,
           request,
         });
@@ -418,26 +519,35 @@ export function Desk() {
         }
       }
 
-      setStatus("Confirm repayment in your wallet.");
-      const hash = await sendPopulatedWrite({
-        publicClient: sepoliaClient,
-        account: address,
-        address: addresses.sepoliaMockMarket as Address,
-        abi: mockMarketAbi,
-        functionName: "repay",
-        functionArgs: [id, value],
-        chainId: SEPOLIA_CHAIN_ID,
-        request,
-      });
-      setRepayTx(hash);
-      const receipt = await sepoliaClient.waitForTransactionReceipt({
-        hash,
-        timeout: 90_000,
-      });
-      if (receipt.status === "reverted") {
-        throw new Error("Repayment reverted on Sepolia.");
+      let lastHash: Hex | undefined;
+      for (const [index, loan] of currentLoans.entries()) {
+        setStatus(
+          `Confirm repayment for loan #${loan.id} (${index + 1}/${currentLoans.length}) in your wallet.`,
+        );
+        const hash = await sendPopulatedWrite({
+          publicClient: sepoliaClient,
+          account: address,
+          address: addresses.sepoliaMockMarket as Address,
+          abi: mockMarketAbi,
+          functionName: "repay",
+          functionArgs: [loan.id, loan.value],
+          chainId: SEPOLIA_CHAIN_ID,
+          request,
+        });
+        const receipt = await sepoliaClient.waitForTransactionReceipt({
+          hash,
+          timeout: 90_000,
+        });
+        if (receipt.status === "reverted") {
+          throw new Error(`Repayment for loan #${loan.id} reverted on Sepolia.`);
+        }
+        lastHash = hash;
       }
-      setStatus(`Repayment confirmed: ${hash}. Next: prove on Creditcoin.`);
+      setRepayTx(lastHash);
+      setLoanRefresh((current) => current + 1);
+      setStatus(
+        `${currentLoans.length === 1 ? "Repayment" : "All repayments"} confirmed. The last repayment is ready to prove on Creditcoin.`,
+      );
     } catch (err: unknown) {
       setStatus(err instanceof Error ? err.message : String(err));
     } finally {
@@ -652,6 +762,54 @@ export function Desk() {
           Sepolia mUSD{" "}
           {musd !== undefined ? Number(formatEther(musd)).toLocaleString() : "—"}
         </p>
+        <div className="loan-dashboard" aria-live="polite">
+          <div className="loan-dashboard-head">
+            <div>
+              <span className="loan-dashboard-label">Active loans</span>
+              <strong>
+                {activeLoansBusy
+                  ? "Checking Sepolia…"
+                  : activeLoans.length
+                    ? `${activeLoans.length} open`
+                    : "None open"}
+              </strong>
+            </div>
+            {activeLoans.length ? (
+              <span className="loan-total">{formatEther(activeLoanDebt)} mUSD due</span>
+            ) : null}
+          </div>
+          {activeLoans.map((loan) => {
+            const selected = loanId === loan.id.toString() && !repayAll;
+            return (
+              <button
+                key={loan.id.toString()}
+                type="button"
+                className="loan-row"
+                aria-pressed={selected}
+                disabled={repayBusy || openLoanBusy}
+                onClick={() => {
+                  setRepayAll(false);
+                  setLoanId(loan.id.toString());
+                  setAmount(formatEther(loan.debt));
+                }}
+              >
+                <span>Loan #{loan.id}</span>
+                <span>{formatEther(loan.debt)} mUSD due</span>
+                <span>{formatEther(loan.principal)} mUSD opened</span>
+              </button>
+            );
+          })}
+          <label className="loan-toggle">
+            <input
+              type="checkbox"
+              checked={repayAll}
+              disabled={!activeLoans.length || repayBusy || openLoanBusy}
+              onChange={(event) => setRepayAll(event.target.checked)}
+            />
+            <span>Repay all active loans</span>
+            {repayAll ? <small>{formatEther(activeLoanDebt)} mUSD across {activeLoans.length} loans</small> : null}
+          </label>
+        </div>
         <div className="field-row">
           <input
             className="input"
@@ -659,6 +817,7 @@ export function Desk() {
             onChange={(e) => setAmount(e.target.value)}
             placeholder="amount (ether units)"
             aria-label="Loan amount"
+            disabled={repayAll}
           />
           <input
             className="input"
@@ -666,6 +825,7 @@ export function Desk() {
             onChange={(e) => setLoanId(e.target.value)}
             placeholder="loan ID (set after opening)"
             aria-label="Loan ID"
+            disabled={repayAll}
           />
         </div>
         <div className="actions">

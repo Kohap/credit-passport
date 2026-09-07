@@ -54,8 +54,6 @@ type ActiveLoan = {
   debt: bigint;
 };
 
-const MAX_LOANS_TO_SHOW = 100n;
-
 function isConfigured(addr: string): boolean {
   return /^0x[0-9a-fA-F]{40}$/.test(addr) && !/^0x0+$/.test(addr.slice(2));
 }
@@ -196,11 +194,9 @@ export function Desk() {
       }
       setActiveLoansBusy(true);
       try {
-        const firstLoanId =
-          nextLoanId > MAX_LOANS_TO_SHOW + 1n ? nextLoanId - MAX_LOANS_TO_SHOW : 1n;
         const ids = Array.from(
-          { length: Number(nextLoanId - firstLoanId) },
-          (_, index) => firstLoanId + BigInt(index),
+          { length: Number(nextLoanId - 1n) },
+          (_, index) => BigInt(index + 1),
         );
         const loans = await Promise.all(
           ids.map(async (id) => {

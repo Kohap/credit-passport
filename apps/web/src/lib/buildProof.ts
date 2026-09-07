@@ -1,5 +1,5 @@
 import { JsonRpcProvider, isHexString } from "ethers";
-import { chainInfo, proofProvider } from "@gluwa/usc-sdk";
+import { chainInfo } from "@gluwa/usc-sdk";
 import type { Hex } from "viem";
 import {
   CREDITCOIN_RPC,
@@ -36,30 +36,158 @@ export class ProveCorsError extends Error {
   }
 }
 
-function looksLikeCors(err: unknown): boolean {
-  const msg = err instanceof Error ? err.message : String(err);
-  return /cors|failed to fetch|networkerror|load failed|access-control/i.test(msg);
+class ProverNetworkError extends Error {
+  constructor(cause?: unknown) {
+    const detail = cause instanceof Error ? cause.message : String(cause ?? "");
+    super(detail || "Unable to reach the proof service");
+    this.name = "ProverNetworkError";
+  }
 }
 
-async function getProofWithRetries(
-  proofBuilder: InstanceType<typeof proofProvider.service.ProofBuilder>,
+type ProverResponse = {
+  chainKey: number;
+  headerNumber: number;
+  txIndex: number;
+  txBytes: Hex;
+  merkleProof: { root: Hex; siblings: { hash: Hex; isLeft: boolean }[] };
+  continuityProof: { lowerEndpointDigest: Hex; roots: Hex[] };
+  cached?: boolean;
+};
+
+type ProverFailure = {
+  status: number;
+  message: string;
+  retriable: boolean;
+};
+
+const PROVER_POLL_MS = 15_000;
+const PROVER_TIMEOUT_MS = 1_200_000;
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function makeProverUrl(base: string, path: string) {
+  return `${base.replace(/\/$/, "")}${path}`;
+}
+
+function getMessage(data: unknown, fallback: string) {
+  if (data && typeof data === "object" && "message" in data) {
+    const message = (data as { message?: unknown }).message;
+    if (typeof message === "string" && message) return message;
+  }
+  return fallback;
+}
+
+async function fetchProverJson<T>(base: string, path: string): Promise<
+  | { ok: true; data: T }
+  | { ok: false; failure: ProverFailure }
+> {
+  let response: Response;
+  try {
+    response = await fetch(makeProverUrl(base, path), {
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+  } catch (cause) {
+    throw new ProverNetworkError(cause);
+  }
+
+  const body = await response.text();
+  let data: unknown = body;
+  try {
+    data = body ? JSON.parse(body) : undefined;
+  } catch {
+    // Non-JSON responses are reported below with their HTTP status.
+  }
+
+  if (response.ok) return { ok: true, data: data as T };
+
+  return {
+    ok: false,
+    failure: {
+      status: response.status,
+      message: getMessage(data, `Prover returned HTTP ${response.status}`),
+      retriable:
+        response.status === 404 ||
+        response.status === 408 ||
+        response.status === 425 ||
+        response.status === 429 ||
+        response.status >= 500 ||
+        Boolean(
+          data &&
+            typeof data === "object" &&
+            (data as { retriable?: unknown }).retriable,
+        ),
+    },
+  };
+}
+
+async function chooseProver(
+  proverUrls: string[],
+  chainKey: number,
   txHash: string,
-  attempts: number,
   onStatus?: (msg: string) => void,
 ) {
-  let lastError: string | undefined;
-  for (let i = 0; i < attempts; i++) {
-    onStatus?.(
-      i === 0
-        ? "Generating Merkle + continuity proof…"
-        : `Retrying getProof (${i + 1}/${attempts})…`,
-    );
-    const result = await proofBuilder.getProof(txHash);
-    if (result.success && result.data) return result;
-    lastError = result.error ?? "missing data";
-    await new Promise((r) => setTimeout(r, 8_000));
+  let lastFailure: ProverFailure | undefined;
+  let networkFailure: unknown;
+
+  for (const proofUrl of proverUrls) {
+    try {
+      onStatus?.(`Connecting to proof service…`);
+      const result = await fetchProverJson<{ attestedHeight?: unknown }>(
+        proofUrl,
+        `/api/v1/attested-height/${chainKey}`,
+      );
+      if (result.ok && typeof result.data.attestedHeight === "number") {
+        return { proofUrl, attestedHeight: result.data.attestedHeight };
+      }
+      lastFailure = result.ok
+        ? {
+            status: 200,
+            message: "Proof service returned no attested height",
+            retriable: false,
+          }
+        : result.failure;
+    } catch (err) {
+      networkFailure = err;
+      onStatus?.("Proof service connection failed; trying the next service…");
+    }
   }
-  throw new Error(lastError ?? "proof generation failed");
+
+  if (networkFailure && !lastFailure) {
+    throw new ProveCorsError(txHash, networkFailure);
+  }
+  throw new Error(lastFailure?.message ?? "No proof service is available");
+}
+
+function toProofPayload(
+  txHash: string,
+  sepoliaBlockNumber: number,
+  data: ProverResponse,
+): ProofPayload {
+  if (
+    !data.txBytes ||
+    !data.merkleProof?.root ||
+    !Array.isArray(data.merkleProof.siblings) ||
+    !data.continuityProof?.lowerEndpointDigest ||
+    !Array.isArray(data.continuityProof.roots)
+  ) {
+    throw new Error("Proof service returned an incomplete proof");
+  }
+  return {
+    sepoliaTxHash: txHash,
+    sepoliaBlockNumber,
+    chainKey: data.chainKey,
+    headerNumber: data.headerNumber,
+    txIndex: data.txIndex,
+    merkleRoot: data.merkleProof.root,
+    siblings: data.merkleProof.siblings,
+    lowerEndpointDigest: data.continuityProof.lowerEndpointDigest,
+    continuityRoots: data.continuityProof.roots,
+    txBytes: data.txBytes,
+    cached: Boolean(data.cached),
+  };
 }
 
 /**
@@ -124,51 +252,66 @@ export async function buildProof(
     ].filter(
       (u, i, arr) => Boolean(u) && arr.indexOf(u) === i,
     );
-    let lastErr: unknown;
-    for (const proofUrl of proverUrls) {
-      try {
-        onStatus?.(`Using prover ${proofUrl}…`);
-        const proofBuilder = new proofProvider.service.ProofBuilder(
-          chainKey,
-          proofUrl,
-          5_000,
-        );
-        await proofBuilder.waitUntilHeightAttested(
-          chainKey,
-          receipt.blockNumber,
-          15_000,
-          1_200_000,
-        );
-        const result = await getProofWithRetries(proofBuilder, txHash, 4, onStatus);
-        const data = result.data!;
-        return {
-          sepoliaTxHash: txHash,
-          sepoliaBlockNumber: receipt.blockNumber,
-          chainKey: data.chainKey,
-          headerNumber: data.headerNumber,
-          txIndex: data.txIndex,
-          merkleRoot: data.merkleProof.root as Hex,
-          siblings: data.merkleProof.siblings.map((s) => ({
-            hash: s.hash as Hex,
-            isLeft: s.isLeft,
-          })),
-          lowerEndpointDigest: data.continuityProof.lowerEndpointDigest as Hex,
-          continuityRoots: data.continuityProof.roots as Hex[],
-          txBytes: data.txBytes as Hex,
-          cached: Boolean(data.cached),
-        };
-      } catch (err) {
-        lastErr = err;
-        if (looksLikeCors(err)) throw new ProveCorsError(txHash, err);
+    const { proofUrl, attestedHeight } = await chooseProver(
+      proverUrls,
+      chainKey,
+      txHash,
+      onStatus,
+    );
+    const deadline = Date.now() + PROVER_TIMEOUT_MS;
+    let latestAttestedHeight = attestedHeight;
+
+    while (Date.now() < deadline) {
+      if (latestAttestedHeight < receipt.blockNumber) {
         onStatus?.(
-          `Prover ${proofUrl} failed: ${err instanceof Error ? err.message : String(err)}`,
+          `Waiting for attestation: proof service has ${latestAttestedHeight}; repayment is in ${receipt.blockNumber}.`,
         );
+        await sleep(PROVER_POLL_MS);
+        const height = await fetchProverJson<{ attestedHeight?: unknown }>(
+          proofUrl,
+          `/api/v1/attested-height/${chainKey}`,
+        );
+        if (!height.ok) {
+          if (!height.failure.retriable) throw new Error(height.failure.message);
+          onStatus?.(`Proof service is temporarily unavailable; retrying…`);
+          continue;
+        }
+        if (typeof height.data.attestedHeight !== "number") {
+          throw new Error("Proof service returned no attested height");
+        }
+        latestAttestedHeight = height.data.attestedHeight;
+        continue;
       }
+
+      onStatus?.("Generating Merkle + continuity proof…");
+      const proof = await fetchProverJson<ProverResponse>(
+        proofUrl,
+        `/api/v1/proof-by-tx/${chainKey}/${txHash}`,
+      );
+      if (proof.ok) return toProofPayload(txHash, receipt.blockNumber, proof.data);
+      if (!proof.failure.retriable) throw new Error(proof.failure.message);
+
+      onStatus?.("Proof service is indexing the attested block; retrying…");
+      await sleep(PROVER_POLL_MS);
+      const height = await fetchProverJson<{ attestedHeight?: unknown }>(
+        proofUrl,
+        `/api/v1/attested-height/${chainKey}`,
+      );
+      if (!height.ok) {
+        if (!height.failure.retriable) throw new Error(height.failure.message);
+        continue;
+      }
+      if (typeof height.data.attestedHeight !== "number") {
+        throw new Error("Proof service returned no attested height");
+      }
+      latestAttestedHeight = height.data.attestedHeight;
     }
-    throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
+
+    throw new Error(
+      "Proof service did not attest this repayment within 20 minutes. Try again shortly.",
+    );
   } catch (err) {
     if (err instanceof ProveCorsError) throw err;
-    if (looksLikeCors(err)) throw new ProveCorsError(txHash, err);
     throw err;
   }
 }

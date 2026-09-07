@@ -601,8 +601,11 @@ export function Desk() {
       setPhase("generating_proof");
 
       const payload = await buildProof(repayTx, (msg) => {
-        if (/attestation/i.test(msg)) setPhase("waiting_attestation");
-        if (/proof|prover|retry/i.test(msg)) setPhase("generating_proof");
+        if (/waiting for attestation|attestation:/i.test(msg)) {
+          setPhase("waiting_attestation");
+        } else if (/proof|prover|retry|indexing/i.test(msg)) {
+          setPhase("generating_proof");
+        }
         setStatus(msg);
       });
       setProof(payload);
@@ -612,7 +615,7 @@ export function Desk() {
         setCorsFallback(true);
         setPhase("error");
         setStatus(
-          "Browser blocked the prover (CORS). Use the CLI fallback panel below, then paste the proof JSON.",
+          "Browser cannot reach the proof service. Use the CLI fallback panel below, then paste the proof JSON.",
         );
         return;
       }
@@ -903,7 +906,7 @@ export function Desk() {
           <div className="cors-panel">
             <h2 style={{ fontSize: "1.25rem", marginBottom: "0.5rem" }}>CLI proof fallback</h2>
             <p>
-              The browser blocked the prover (CORS). Run this locally, then paste{" "}
+              The browser cannot reach the proof service. Run this locally, then paste{" "}
               <span className="mono">proof.json</span>.
             </p>
             <p className="mono">{cliCmd}</p>

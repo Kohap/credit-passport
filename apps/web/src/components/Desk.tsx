@@ -13,7 +13,6 @@ import {
   useWaitForTransactionReceipt,
 } from "wagmi";
 import { formatEther, parseEther, type Address, type Hex } from "viem";
-import { sepolia } from "viem/chains";
 import {
   ATTESTOR_DASHBOARD,
   CREDITCOIN_CHAIN_ID,
@@ -22,8 +21,10 @@ import {
   SCORE_FORMULA,
   SEPOLIA_CHAIN_ID,
   SEPOLIA_EXPLORER,
+  SEPOLIA_RPC,
   addresses,
 } from "@/config/networks";
+import { sendPopulatedWrite } from "@/lib/sepolia-write";
 import {
   creditLineAbi,
   creditScoreAbi,
@@ -172,12 +173,9 @@ export function Desk() {
       params: [
         {
           chainId: `0x${SEPOLIA_CHAIN_ID.toString(16)}`,
-          chainName: sepolia.name,
-          nativeCurrency: sepolia.nativeCurrency,
-          rpcUrls: [
-            process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL ??
-              "https://ethereum-sepolia-rpc.publicnode.com",
-          ],
+          chainName: "Sepolia",
+          nativeCurrency: { name: "Sepolia Ether", symbol: "ETH", decimals: 18 },
+          rpcUrls: [SEPOLIA_RPC],
           blockExplorerUrls: [SEPOLIA_EXPLORER],
         },
       ],
@@ -254,31 +252,31 @@ export function Desk() {
           : "Hourly faucet already used — confirm mint of 1,000 mUSD…",
       );
 
+      if (!sepoliaClient) throw new Error("Sepolia RPC unavailable.");
+
       let hash: Hex;
       try {
-        hash = useHourlyFaucet
-          ? await writeContractAsync({
-              address: addresses.sepoliaMockUsd as Address,
-              abi: mockUsdAbi,
-              functionName: "faucet",
-              chainId: SEPOLIA_CHAIN_ID,
-            })
-          : await writeContractAsync({
-              address: addresses.sepoliaMockUsd as Address,
-              abi: mockUsdAbi,
-              functionName: "mint",
-              args: [address, amountWei],
-              chainId: SEPOLIA_CHAIN_ID,
-            });
+        hash = await sendPopulatedWrite({
+          publicClient: sepoliaClient,
+          account: address,
+          address: addresses.sepoliaMockUsd as Address,
+          abi: mockUsdAbi,
+          functionName: useHourlyFaucet ? "faucet" : "mint",
+          functionArgs: useHourlyFaucet ? undefined : [address, amountWei],
+          chainId: SEPOLIA_CHAIN_ID,
+        });
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         if (/rejected|denied|4001/i.test(msg)) throw err;
+        if (/0 Sepolia ETH|Not enough Sepolia ETH|timed out|took too long/i.test(msg)) throw err;
         setStatus("Confirm mint of 1,000 mUSD in the wallet…");
-        hash = await writeContractAsync({
+        hash = await sendPopulatedWrite({
+          publicClient: sepoliaClient,
+          account: address,
           address: addresses.sepoliaMockUsd as Address,
           abi: mockUsdAbi,
           functionName: "mint",
-          args: [address, amountWei],
+          functionArgs: [address, amountWei],
           chainId: SEPOLIA_CHAIN_ID,
         });
       }
@@ -308,12 +306,16 @@ export function Desk() {
 
   async function openLoan() {
     await ensureSepolia();
+    if (!address) throw new Error("Connect wallet first.");
+    if (!sepoliaClient) throw new Error("Sepolia RPC unavailable.");
     const principal = parseEther(amount || "100");
-    const hash = await writeContractAsync({
+    const hash = await sendPopulatedWrite({
+      publicClient: sepoliaClient,
+      account: address,
       address: addresses.sepoliaMockMarket as Address,
       abi: mockMarketAbi,
       functionName: "openLoan",
-      args: [principal],
+      functionArgs: [principal],
       chainId: SEPOLIA_CHAIN_ID,
     });
     setStatus(`Open loan tx ${hash}`);
@@ -321,20 +323,26 @@ export function Desk() {
 
   async function repayLoan() {
     await ensureSepolia();
+    if (!address) throw new Error("Connect wallet first.");
+    if (!sepoliaClient) throw new Error("Sepolia RPC unavailable.");
     const value = parseEther(amount || "100");
     const id = BigInt(loanId || "1");
-    await writeContractAsync({
+    await sendPopulatedWrite({
+      publicClient: sepoliaClient,
+      account: address,
       address: addresses.sepoliaMockUsd as Address,
       abi: mockUsdAbi,
       functionName: "approve",
-      args: [addresses.sepoliaMockMarket as Address, value],
+      functionArgs: [addresses.sepoliaMockMarket as Address, value],
       chainId: SEPOLIA_CHAIN_ID,
     });
-    const hash = await writeContractAsync({
+    const hash = await sendPopulatedWrite({
+      publicClient: sepoliaClient,
+      account: address,
       address: addresses.sepoliaMockMarket as Address,
       abi: mockMarketAbi,
       functionName: "repay",
-      args: [id, value],
+      functionArgs: [id, value],
       chainId: SEPOLIA_CHAIN_ID,
     });
     setRepayTx(hash);

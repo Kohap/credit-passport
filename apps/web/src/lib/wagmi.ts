@@ -2,12 +2,13 @@
 
 import { createConfig } from "wagmi";
 import { injected } from "@wagmi/core";
-import { sepolia } from "wagmi/chains";
+import { sepolia as sepoliaCatalog } from "wagmi/chains";
 import { fallback, http, type Chain } from "viem";
 import {
   CREDITCOIN_CHAIN_ID,
   CREDITCOIN_RPC,
   SEPOLIA_CHAIN_ID,
+  SEPOLIA_RPCS,
 } from "@/config/networks";
 
 export const creditcoinTestnet = {
@@ -26,18 +27,19 @@ export const creditcoinTestnet = {
   testnet: true,
 } as const satisfies Chain;
 
-const sepoliaRpc =
-  process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL ??
-  "https://ethereum-sepolia-rpc.publicnode.com";
+export const sepolia = {
+  ...sepoliaCatalog,
+  rpcUrls: {
+    default: { http: [...SEPOLIA_RPCS] as [string, ...string[]] },
+  },
+} as const satisfies Chain;
 
 export const wagmiConfig = createConfig({
   chains: [sepolia, creditcoinTestnet],
   connectors: [injected({ shimDisconnect: true })],
   transports: {
     [SEPOLIA_CHAIN_ID]: fallback(
-      [sepoliaRpc, "https://rpc.sepolia.org", "https://1rpc.io/sepolia"].map((url) =>
-        http(url, { timeout: 12_000 }),
-      ),
+      SEPOLIA_RPCS.map((url) => http(url, { timeout: 8_000, retryCount: 1 })),
     ),
     [CREDITCOIN_CHAIN_ID]: http(CREDITCOIN_RPC, { timeout: 20_000 }),
   },

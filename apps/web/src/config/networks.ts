@@ -20,6 +20,31 @@ function pub(envVal: string | undefined, fallback: string): string {
   return v ? v : fallback;
 }
 
+function isDeadSepoliaRpc(url: string): boolean {
+  try {
+    const host = new URL(url).hostname;
+    return host === "rpc2.sepolia.org" || host === "rpc.sepolia.org";
+  } catch {
+    return true;
+  }
+}
+
+const PUBLIC_SEPOLIA = "https://ethereum-sepolia-rpc.publicnode.com";
+const envSepoliaRpc = process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL?.trim();
+
+export const SEPOLIA_RPC =
+  envSepoliaRpc && !isDeadSepoliaRpc(envSepoliaRpc)
+    ? envSepoliaRpc
+    : PUBLIC_SEPOLIA;
+
+export const SEPOLIA_RPCS: readonly string[] = [
+  SEPOLIA_RPC,
+  PUBLIC_SEPOLIA,
+  "https://1rpc.io/sepolia",
+  "https://rpc.sepolia.ethpandaops.io",
+  "https://sepolia.gateway.tenderly.co",
+].filter((url, i, arr) => arr.indexOf(url) === i);
+
 /** Live CC3 / Sepolia demo deploys — overridable via NEXT_PUBLIC_* env. */
 export const addresses = {
   sepoliaMockUsd: pub(

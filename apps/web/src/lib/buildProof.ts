@@ -63,8 +63,8 @@ async function getProofWithRetries(
 }
 
 /**
- * Build an Attestcoin proof in the browser (GitHub Pages has no Node API routes).
- * Tries primary prover, then fallback. Throws ProveCorsError on browser CORS blocks.
+ * Build an Attestcoin proof in the browser. Vercel rewrites proxy the hosted provers so
+ * browser CORS policy cannot interrupt the desk flow. GitHub Pages falls back to direct URLs.
  */
 export async function buildProof(
   txHash: string,
@@ -116,7 +116,12 @@ export async function buildProof(
       `Waiting for attestation of Sepolia block ${receipt.blockNumber} (can take minutes)…`,
     );
 
-    const proverUrls = [primary, fallback].filter(
+    const proverUrls = [
+      "/api/prover",
+      primary,
+      "/api/prover-fallback",
+      fallback,
+    ].filter(
       (u, i, arr) => Boolean(u) && arr.indexOf(u) === i,
     );
     let lastErr: unknown;

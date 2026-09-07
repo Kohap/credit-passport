@@ -14,6 +14,22 @@ const nextConfig: NextConfig = {
         trailingSlash: true,
       }
     : {}),
+  ...(!isGithubPages
+    ? {
+        async rewrites() {
+          return [
+            {
+              source: "/api/prover/:path*",
+              destination: "https://prover.cc3-testnet.creditcoin.network/:path*",
+            },
+            {
+              source: "/api/prover-fallback/:path*",
+              destination: "https://proof-gen-api.cc3-testnet.creditcoin.network/:path*",
+            },
+          ];
+        },
+      }
+    : {}),
   webpack: (config) => {
     config.resolve.fallback = {
       ...config.resolve.fallback,

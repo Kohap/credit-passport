@@ -221,22 +221,67 @@ export function Desk() {
       return;
     }
     setFaucetBusy(true);
-    setStatus("Confirm 1,000 mUSD in Rabby — click Sign to submit.");
     try {
       const provider = (await connector?.getProvider()) as
         | { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> }
         | undefined;
-      const hash = await sendPopulatedWrite({
-        account: address,
-        address: addresses.sepoliaMockUsd as Address,
-        abi: mockUsdAbi,
-        functionName: "mint",
-        functionArgs: [address, parseEther("1000")],
-        chainId: SEPOLIA_CHAIN_ID,
-        request: provider?.request?.bind(provider),
-      });
+      const request = provider?.request?.bind(provider);
+      const faucetAmount = parseEther("1000");
+      const sendMUsd = (functionName: "faucet" | "mint") =>
+        sendPopulatedWrite({
+          account: address,
+          address: addresses.sepoliaMockUsd as Address,
+          abi: mockUsdAbi,
+          functionName,
+          functionArgs: functionName === "mint" ? [address, faucetAmount] : undefined,
+          chainId: SEPOLIA_CHAIN_ID,
+          request,
+        });
+
+      let useHourlyFaucet = true;
+      try {
+        if (sepoliaClient) {
+          const last = await withTimeout(
+            sepoliaClient.readContract({
+              address: addresses.sepoliaMockUsd as Address,
+              abi: mockUsdAbi,
+              functionName: "lastFaucetAt",
+              args: [address],
+            }),
+            8_000,
+            "Sepolia RPC took too long while checking faucet cooldown.",
+          );
+          const now = BigInt(Math.floor(Date.now() / 1000));
+          useHourlyFaucet = last === 0n || now >= last + 3600n;
+        }
+      } catch {
+        useHourlyFaucet = true;
+      }
+
+      setStatus(
+        useHourlyFaucet
+          ? "Confirm the mUSD faucet in Rabby or MetaMask."
+          : "Hourly faucet already used. Confirm the demo mint fallback.",
+      );
+
+      let hash: Hex;
+      try {
+        hash = await sendMUsd(useHourlyFaucet ? "faucet" : "mint");
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (/rejected|denied|4001/i.test(msg)) throw err;
+        if (/0 Sepolia ETH|Not enough Sepolia ETH|insufficient funds/i.test(msg)) throw err;
+        if (/Add Sepolia/i.test(msg)) {
+          setStatus("Adding Sepolia to the wallet. Confirm the network prompt.");
+          await addNetworks();
+        }
+        setStatus("Faucet unavailable or cooling down. Confirm the demo mint fallback.");
+        hash = await sendMUsd("mint");
+      }
+
       setFaucetTx(hash);
       setStatus("Waiting for Sepolia confirmation…");
+      let confirmedBalance: bigint | undefined;
       if (sepoliaClient) {
         const receipt = await sepoliaClient.waitForTransactionReceipt({
           hash,
@@ -245,9 +290,16 @@ export function Desk() {
         if (receipt.status === "reverted") {
           throw new Error("Faucet transaction reverted on Sepolia.");
         }
+        confirmedBalance = await sepoliaClient.readContract({
+          address: addresses.sepoliaMockUsd as Address,
+          abi: mockUsdAbi,
+          functionName: "balanceOf",
+          args: [address],
+          blockNumber: receipt.blockNumber,
+        });
       }
       const refreshed = await refetchMusd();
-      const bal = refreshed.data;
+      const bal = confirmedBalance ?? refreshed.data;
       const shown =
         bal !== undefined
           ? `${Number(formatEther(bal)).toLocaleString()} mUSD`

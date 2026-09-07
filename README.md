@@ -10,7 +10,7 @@ Repayment lives on Sepolia; credit decisions live on Creditcoin. Attestcoin is t
 
 ## Live app (convenience) vs proof (source of truth)
 
-- **Desk (primary):** [https://web-mauve-five-21.vercel.app/](https://web-mauve-five-21.vercel.app/) — use this for judges once **Connect wallet** loads.
+- **Desk (primary):** [https://web-mauve-five-21.vercel.app/app](https://web-mauve-five-21.vercel.app/app) — use this for judges once **Connect wallet** loads. Landing: [https://web-mauve-five-21.vercel.app/](https://web-mauve-five-21.vercel.app/).
 - **GitHub Pages (backup):** https://kohap.github.io/credit-passport/ — only if it serves the Next app, not the README.
 - Local: `npm run dev:web`
 - **Proof of Attestcoin:** `npm run prove -- <sepoliaTx> --submit` (CLI). Browser prove can CORS-fail; CLI is source of truth for the video if needed.

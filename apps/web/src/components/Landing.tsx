@@ -26,6 +26,41 @@ function StampMark() {
   );
 }
 
+function ThemeMark({ theme }: { theme: LandingTheme }) {
+  const toLight = theme === "dark";
+  return (
+    <svg
+      className="landing-theme-mark"
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 32 32"
+      aria-hidden="true"
+    >
+      <rect width="32" height="32" rx="7" fill="#4A1C28" />
+      <rect width="5" height="32" fill="#0E1116" opacity="0.32" />
+      {toLight ? (
+        <>
+          <circle cx="17.5" cy="16" r="4.4" fill="#D6CBB8" />
+          <g stroke="#D6CBB8" strokeWidth="1.6" strokeLinecap="round">
+            <path d="M17.5 6.8v2.2" />
+            <path d="M17.5 23v2.2" />
+            <path d="M8.3 16h2.2" />
+            <path d="M24.5 16h2.2" />
+            <path d="M11 9.6l1.6 1.6" />
+            <path d="M22.4 20.8l1.6 1.6" />
+            <path d="M11 22.4l1.6-1.6" />
+            <path d="M22.4 11.2l1.6-1.6" />
+          </g>
+        </>
+      ) : (
+        <>
+          <circle cx="17.2" cy="16" r="6.1" fill="#D6CBB8" />
+          <circle cx="21.2" cy="13.4" r="5.1" fill="#4A1C28" />
+        </>
+      )}
+    </svg>
+  );
+}
+
 const INSTRUMENTS = [
   {
     title: "Passport",
@@ -143,8 +178,9 @@ export function Landing() {
             className="landing-theme"
             onClick={toggle}
             aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            title={theme === "dark" ? "Light mode" : "Dark mode"}
           >
-            {theme === "dark" ? "Light" : "Dark"}
+            <ThemeMark theme={theme} />
           </button>
         </nav>
       </header>

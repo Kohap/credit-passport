@@ -407,11 +407,22 @@ textarea.input {
 }
 
 .landing-nav-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
   font-family: var(--serif);
   font-size: 1.15rem;
   letter-spacing: -0.02em;
   color: var(--ink);
   text-decoration: none;
+}
+
+.landing-mark,
+.landing-theme-mark {
+  display: block;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
 }
 
 .landing-nav-brand:hover {
@@ -439,9 +450,19 @@ textarea.input {
   cursor: pointer;
 }
 
+.landing-theme {
+  width: 44px;
+  min-width: 44px;
+  justify-content: center;
+}
+
 .landing-nav-links a:hover,
 .landing-theme:hover {
   color: var(--ink);
+}
+
+.landing-theme:hover .landing-theme-mark {
+  opacity: 0.86;
 }
 
 .landing-nav-links a.landing-nav-strong {

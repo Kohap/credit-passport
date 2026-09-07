@@ -10,110 +10,93 @@ function toHex(value: bigint | number): Hex {
   return `0x${BigInt(value).toString(16)}`;
 }
 
-type Injected = {
-  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
-};
+type RequestFn = (args: {
+  method: string;
+  params?: unknown[];
+}) => Promise<unknown>;
 
-function injectedRequest(): Injected["request"] {
-  const eth = (window as unknown as { ethereum?: Injected }).ethereum;
+function injectedRequest(): RequestFn {
+  const eth = (window as unknown as { ethereum?: { request: RequestFn } }).ethereum;
   if (!eth?.request) {
     throw new Error(
-      "No injected wallet. Open this desk in a browser with MetaMask.",
+      "No injected wallet. Open this desk in a browser with Rabby or MetaMask.",
     );
   }
   return eth.request.bind(eth);
 }
 
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
+}
+
 export async function sendPopulatedWrite(args: {
-  publicClient: PublicClient;
+  publicClient?: PublicClient;
   account: Address;
   abi: Abi;
   address: Address;
   functionName: string;
   functionArgs?: readonly unknown[];
   chainId: number;
+  request?: RequestFn;
 }): Promise<Hex> {
-  const request = injectedRequest();
+  const request = args.request ?? injectedRequest();
   const data = encodeFunctionData({
     abi: args.abi,
     functionName: args.functionName,
     args: args.functionArgs,
   } as never);
 
-  const [balance, nonce, fees] = await Promise.all([
-    args.publicClient.getBalance({ address: args.account }),
-    args.publicClient.getTransactionCount({
-      address: args.account,
-      blockTag: "pending",
-    }),
-    args.publicClient.estimateFeesPerGas(),
-  ]);
-
-  if (balance === 0n) {
-    throw new Error(
-      "This wallet has 0 Sepolia ETH, so the faucet cannot pay gas. Get a little Sepolia ETH, then retry.",
-    );
-  }
-
-  let gas: bigint;
-  try {
-    gas = await args.publicClient.estimateGas({
-      account: args.account,
-      to: args.address,
-      data,
-    });
-  } catch (err) {
-    const text = err instanceof Error ? err.message : String(err);
-    if (/insufficient funds|gas required exceeds/i.test(text)) {
-      throw new Error(
-        "Not enough Sepolia ETH for gas. Fund the wallet on Sepolia, then retry.",
+  const current = await withTimeout(
+    request({ method: "eth_chainId" }),
+    8_000,
+    "Wallet did not report a network. Unlock Rabby, then retry.",
+  );
+  const currentId = Number(current);
+  if (currentId !== args.chainId) {
+    try {
+      await withTimeout(
+        request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: toHex(args.chainId) }],
+        }),
+        25_000,
+        "Wallet did not switch to Sepolia. Switch network in Rabby, then retry.",
       );
+    } catch (err) {
+      const text = err instanceof Error ? err.message : String(err);
+      if (/4902|Unrecognized chain|not added/i.test(text)) {
+        throw new Error("Add Sepolia in the wallet, then retry Faucet mUSD.");
+      }
+      throw err;
     }
-    throw err;
   }
 
-  const gasLimit = gas < 21_000n ? 21_000n : (gas * 12n) / 10n;
-  const maxFee = fees.maxFeePerGas ?? fees.gasPrice ?? 1_000_000_000n;
-  const maxPrio = fees.maxPriorityFeePerGas ?? 1_000_000n;
-  if (balance < gasLimit * maxFee) {
-    throw new Error(
-      "Not enough Sepolia ETH for gas. Fund the wallet on Sepolia, then retry.",
-    );
-  }
-
-  const tx = {
-    from: args.account,
-    to: args.address,
-    data,
-    nonce: toHex(nonce),
-    gas: toHex(gasLimit),
-    chainId: toHex(args.chainId),
-    type: "0x2",
-    maxFeePerGas: toHex(maxFee),
-    maxPriorityFeePerGas: toHex(maxPrio),
-  };
-
-  let hash: unknown;
-  try {
-    hash = await request({ method: "eth_sendTransaction", params: [tx] });
-  } catch (err) {
-    const text = err instanceof Error ? err.message : String(err);
-    if (/rejected|denied|4001/i.test(text)) throw err;
-    hash = await request({
+  const hash = await withTimeout(
+    request({
       method: "eth_sendTransaction",
       params: [
         {
-          from: tx.from,
-          to: tx.to,
-          data: tx.data,
-          nonce: tx.nonce,
-          gas: tx.gas,
-          chainId: tx.chainId,
-          gasPrice: toHex(maxFee),
+          from: args.account,
+          to: args.address,
+          data,
         },
       ],
-    });
-  }
+    }),
+    120_000,
+    "Wallet did not confirm. Click Sign in Rabby (that submits the mint), then retry if it stays open.",
+  );
 
   if (typeof hash !== "string" || !hash.startsWith("0x")) {
     throw new Error("Wallet did not return a transaction hash.");

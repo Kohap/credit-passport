@@ -70,7 +70,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promi
 }
 
 export function Desk() {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, connector } = useAccount();
   const chainId = useChainId();
   const { switchChainAsync } = useSwitchChain();
   const { writeContractAsync } = useWriteContract();
@@ -201,86 +201,20 @@ export function Desk() {
       return;
     }
     setFaucetBusy(true);
-    setStatus("Switching to Sepolia — confirm in the wallet if asked…");
+    setStatus("Confirm 1,000 mUSD in Rabby — click Sign to submit.");
     try {
-      try {
-        await withTimeout(
-          ensureSepolia(),
-          25_000,
-          "Wallet did not switch to Sepolia. Open MetaMask, switch to Sepolia, then retry.",
-        );
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        if (/did not switch/i.test(msg)) throw err;
-        setStatus("Adding Sepolia to the wallet…");
-        await withTimeout(
-          addNetworks(),
-          45_000,
-          "Wallet did not add Sepolia. Open MetaMask and approve the network, then retry.",
-        );
-        await withTimeout(
-          ensureSepolia(),
-          25_000,
-          "Wallet did not switch to Sepolia. Switch network in MetaMask, then retry.",
-        );
-      }
-
-      const amountWei = parseEther("1000");
-      let useHourlyFaucet = false;
-      try {
-        if (sepoliaClient) {
-          const last = await withTimeout(
-            sepoliaClient.readContract({
-              address: addresses.sepoliaMockUsd as Address,
-              abi: mockUsdAbi,
-              functionName: "lastFaucetAt",
-              args: [address],
-            }),
-            8_000,
-            "rpc",
-          );
-          const now = BigInt(Math.floor(Date.now() / 1000));
-          useHourlyFaucet = last === 0n || now >= last + 3600n;
-        }
-      } catch {
-        useHourlyFaucet = false;
-      }
-
-      setStatus(
-        useHourlyFaucet
-          ? "Confirm 1,000 mUSD in the wallet…"
-          : "Hourly faucet already used — confirm mint of 1,000 mUSD…",
-      );
-
-      if (!sepoliaClient) throw new Error("Sepolia RPC unavailable.");
-
-      let hash: Hex;
-      try {
-        hash = await sendPopulatedWrite({
-          publicClient: sepoliaClient,
-          account: address,
-          address: addresses.sepoliaMockUsd as Address,
-          abi: mockUsdAbi,
-          functionName: useHourlyFaucet ? "faucet" : "mint",
-          functionArgs: useHourlyFaucet ? undefined : [address, amountWei],
-          chainId: SEPOLIA_CHAIN_ID,
-        });
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        if (/rejected|denied|4001/i.test(msg)) throw err;
-        if (/0 Sepolia ETH|Not enough Sepolia ETH|timed out|took too long/i.test(msg)) throw err;
-        setStatus("Confirm mint of 1,000 mUSD in the wallet…");
-        hash = await sendPopulatedWrite({
-          publicClient: sepoliaClient,
-          account: address,
-          address: addresses.sepoliaMockUsd as Address,
-          abi: mockUsdAbi,
-          functionName: "mint",
-          functionArgs: [address, amountWei],
-          chainId: SEPOLIA_CHAIN_ID,
-        });
-      }
-
+      const provider = (await connector?.getProvider()) as
+        | { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> }
+        | undefined;
+      const hash = await sendPopulatedWrite({
+        account: address,
+        address: addresses.sepoliaMockUsd as Address,
+        abi: mockUsdAbi,
+        functionName: "mint",
+        functionArgs: [address, parseEther("1000")],
+        chainId: SEPOLIA_CHAIN_ID,
+        request: provider?.request?.bind(provider),
+      });
       setFaucetTx(hash);
       setStatus("Waiting for Sepolia confirmation…");
       if (sepoliaClient) {
@@ -299,6 +233,8 @@ export function Desk() {
           ? `${Number(formatEther(bal)).toLocaleString()} mUSD`
           : "1,000 mUSD";
       setStatus(`Received. Balance ${shown}.`);
+    } catch (err: unknown) {
+      setStatus(err instanceof Error ? err.message : String(err));
     } finally {
       setFaucetBusy(false);
     }

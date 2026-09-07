@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { IBM_Plex_Sans } from "next/font/google";
 import { Providers } from "@/components/Providers";
 import "./globals.css";
+import "./landing-mark.css";
 
 const plexSans = IBM_Plex_Sans({
   subsets: ["latin"],

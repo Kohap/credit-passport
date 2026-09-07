@@ -14,3 +14,154 @@
 .landing-hero-aside .hero-actions {
   margin-top: 0.15rem;
 }
+
+.landing-nav {
+  flex-wrap: wrap;
+}
+
+.landing-nav-links {
+  flex-wrap: wrap;
+}
+
+.landing-nav-links a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.landing-section {
+  scroll-margin-top: 1.25rem;
+}
+
+.landing-list {
+  list-style: none;
+  margin: 1.75rem 0 0;
+  padding: 0;
+}
+
+.landing-list li {
+  padding: 1.15rem 0 0;
+  margin-top: 1.15rem;
+  border-top: 1px solid var(--line);
+}
+
+.landing-list h3 {
+  font-family: var(--serif);
+  font-size: 1.2rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.3rem;
+}
+
+.landing-list p {
+  margin: 0;
+  color: var(--mute);
+  line-height: 1.5;
+}
+
+.landing-break {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.landing-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.35rem;
+  margin: 1.5rem 0 0 !important;
+  font-size: 0.95rem;
+}
+
+.landing-links a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.landing-faq {
+  margin-top: 1.75rem;
+}
+
+.landing-faq details {
+  border-top: 1px solid var(--line);
+  padding: 0.15rem 0;
+}
+
+.landing-faq summary {
+  font-family: var(--serif);
+  font-size: 1.12rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  list-style: none;
+  color: var(--ink);
+}
+
+.landing-faq summary::-webkit-details-marker {
+  display: none;
+}
+
+.landing-faq summary::after {
+  content: "";
+  width: 0.55rem;
+  height: 0.55rem;
+  margin-left: auto;
+  flex-shrink: 0;
+  border-right: 1px solid var(--mute);
+  border-bottom: 1px solid var(--mute);
+  transform: rotate(45deg) translate(-2px, -2px);
+  transition: transform 180ms var(--ease);
+}
+
+.landing-faq details[open] summary::after {
+  transform: rotate(225deg) translate(-1px, -1px);
+}
+
+.landing-faq details p {
+  margin: 0 0 1rem;
+  color: var(--mute);
+  line-height: 1.55;
+  max-width: 38rem;
+}
+
+.landing-legal-note {
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 0.85rem;
+}
+
+.landing-legal-note p {
+  margin: 0;
+  color: var(--mute);
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.landing-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+}
+
+.landing-footer-links a {
+  color: var(--mute);
+  text-decoration: none;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.landing-footer-links a:hover {
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-faq summary::after {
+    transition: none;
+  }
+}

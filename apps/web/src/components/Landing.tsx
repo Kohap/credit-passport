@@ -1,5 +1,10 @@
 import Link from "next/link";
 
+const PRECOMPILE = "0x0000000000000000000000000000000000000FD2";
+const ASC = "0xc5c9B5A4842B20D945aAD6824A58Afdbb78fecbb";
+const PROOF_BUILDER_URL = "https://prover.cc3-testnet.creditcoin.network";
+const REPO = "https://github.com/Kohap/credit-passport";
+
 function StampMark() {
   return (
     <svg
@@ -18,6 +23,67 @@ function StampMark() {
   );
 }
 
+const INSTRUMENTS = [
+  {
+    title: "Passport",
+    body: "A soulbound PASS token on Creditcoin. One holder, one book, minted in the same transaction as the first verified repayment.",
+  },
+  {
+    title: "Score",
+    body: "+40 on the first verified repayment, +20 on each later one, +10 if remainingDebt is zero. Capped at 100.",
+  },
+  {
+    title: "CreditLine",
+    body: "Borrow cap is 100 mUSD plus twice the score. Drawn against the line only after proveRepayment writes.",
+  },
+] as const;
+
+const DEV_POINTS = [
+  {
+    title: "Attestcoin precompile",
+    body: `verifyAndEmit at ${PRECOMPILE}. Receipt status, emitter, borrower, and replay key are checked on Creditcoin — not by an operator.`,
+  },
+  {
+    title: "proveRepayment",
+    body: `CreditPassportASC is the only writer of score, cap, and the NFT. ${ASC}`,
+  },
+  {
+    title: "ProofBuilder",
+    body: "Merkle inclusion plus continuity for a LoanRepaid receipt. The desk can paste proof.json if you build locally.",
+  },
+] as const;
+
+const FAQ = [
+  {
+    q: "What does Credit Passport issue?",
+    a: "A soulbound passport NFT, a repayment score, and a borrow cap on Creditcoin after a verified Ethereum repayment. Nothing is written until Attestcoin accepts the inclusion proof.",
+  },
+  {
+    q: "Is this a bureau or a lender?",
+    a: "No. It is on-chain software. It does not collect KYC, does not report to a credit bureau, and does not extend fiat credit.",
+  },
+  {
+    q: "What is live, and what is a fixture?",
+    a: "Attestcoin verification is live on Creditcoin CC3. MockMarket on Sepolia is a fixture that emits LoanRepaid so the path can be run. The intended next source is a live lending-pool repay event.",
+  },
+  {
+    q: "Who can change a score?",
+    a: "Only CreditPassportASC, after proveRepayment succeeds. There is no oracle operator and no admin write on score, cap, or the passport.",
+  },
+  {
+    q: "What data is stored?",
+    a: "Wallet addresses, proofs, score, cap, and token id live on public testnets. Credit Passport does not collect names, emails, or off-chain identity.",
+  },
+  {
+    q: "Can the passport be transferred?",
+    a: "No. It is soulbound to the proving wallet.",
+  },
+  {
+    q: "Which networks?",
+    a: "Sepolia (11155111) and Creditcoin CC3 (102031). Attestcoin chainKey for Sepolia is 1 — not the chainId.",
+  },
+] as const;
+
 export function Landing() {
   return (
     <div className="landing">
@@ -27,13 +93,11 @@ export function Landing() {
           Credit Passport
         </Link>
         <nav className="landing-nav-links" aria-label="Primary">
-          <Link href="/docs" className="landing-nav-optional">
-            Docs
-          </Link>
-          <Link href="/deck" className="landing-nav-optional">
-            Deck
-          </Link>
-          <Link href="/dossier">Dossier</Link>
+          <a href="#product">Product</a>
+          <a href="#developers" className="landing-nav-optional">
+            Developers
+          </a>
+          <a href="#legal">Legal</a>
           <Link href="/app">Open Desk</Link>
         </nav>
       </header>
@@ -65,16 +129,24 @@ export function Landing() {
       </section>
 
       <main className="landing-main">
-        <section className="landing-section landing-problem" aria-labelledby="problem-title">
-          <h2 id="problem-title">Credit should travel with the borrower</h2>
+        <section className="landing-section landing-problem" id="product" aria-labelledby="product-title">
+          <h2 id="product-title">Credit should travel with the borrower</h2>
           <p>
             A repayment on Ethereum does not automatically count on Creditcoin. Oracles put
             trust back in the middle. Credit Passport uses Attestcoin so a proven repayment
             can raise score, mint a soulbound Passport, and open a CreditLine.
           </p>
+          <ul className="landing-list">
+            {INSTRUMENTS.map((item) => (
+              <li key={item.title}>
+                <h3>{item.title}</h3>
+                <p>{item.body}</p>
+              </li>
+            ))}
+          </ul>
         </section>
 
-        <section className="landing-section" id="how" aria-labelledby="how-title">
+        <section className="landing-section" aria-labelledby="how-title">
           <h2 id="how-title">How it works</h2>
           <ol className="landing-steps">
             <li>
@@ -92,24 +164,83 @@ export function Landing() {
           </ol>
         </section>
 
-        <section className="landing-close" aria-labelledby="close-title">
-          <div className="landing-close-visual" aria-hidden="true" />
-          <div className="landing-close-copy">
-            <h2 id="close-title">Run the Attestcoin loop</h2>
+        <section className="landing-section" id="developers" aria-labelledby="developers-title">
+          <h2 id="developers-title">Integrate the proof, not an oracle</h2>
+          <p>
+            Same EOA on Sepolia and Creditcoin CC3. The desk, ProofBuilder, and contracts
+            are public. Read the docs or clone the repo if you are wiring a repay source.
+          </p>
+          <ul className="landing-list">
+            {DEV_POINTS.map((item) => (
+              <li key={item.title}>
+                <h3>{item.title}</h3>
+                <p className="landing-break">{item.body}</p>
+              </li>
+            ))}
+          </ul>
+          <p className="landing-links">
+            <Link href="/docs">Docs</Link>
+            <a href={PROOF_BUILDER_URL} target="_blank" rel="noreferrer">
+              ProofBuilder
+            </a>
+            <a href={REPO} target="_blank" rel="noreferrer">
+              Contracts and CLI
+            </a>
+          </p>
+        </section>
+
+        <section className="landing-section" id="legal" aria-labelledby="legal-title">
+          <h2 id="legal-title">Legal</h2>
+          <p>
+            Credit Passport is software on public testnets. MockUSD has no market value.
+            Use of the desk is at your own risk and does not create a lending relationship.
+          </p>
+          <div className="landing-faq">
+            {FAQ.map((item) => (
+              <details key={item.q}>
+                <summary>{item.q}</summary>
+                <p>{item.a}</p>
+              </details>
+            ))}
+          </div>
+          <div className="landing-legal-note">
             <p>
-              One MetaMask account on Sepolia and Creditcoin CC3. About ninety seconds once
-              attestation is ready.
+              Not an offer of credit, a security, or investment advice. No warranty, express
+              or implied. Figures on the desk are testnet records. Review the published
+              contracts before relying on any score, cap, or passport.
             </p>
-            <Link href="/app" className="btn btn-primary landing-cta">
-              Open Desk
-            </Link>
+            <p>
+              On-chain activity is public. Connecting a wallet reveals that address to the
+              network and to the desk interface. We do not sell personal data because we
+              do not collect it off-chain.
+            </p>
           </div>
         </section>
       </main>
 
+      <section className="landing-close" aria-labelledby="close-title">
+        <div className="landing-close-visual" aria-hidden="true" />
+        <div className="landing-close-copy">
+          <h2 id="close-title">Run the Attestcoin loop</h2>
+          <p>
+            One MetaMask account on Sepolia and Creditcoin CC3. About ninety seconds once
+            attestation is ready.
+          </p>
+          <Link href="/app" className="btn btn-primary landing-cta">
+            Open Desk
+          </Link>
+        </div>
+      </section>
+
       <footer className="landing-footer">
         <div className="landing-footer-grid">
           <p>Credit Passport · Creditcoin CC3</p>
+          <p className="landing-footer-links">
+            <a href="#product">Product</a>
+            <a href="#developers">Developers</a>
+            <a href="#legal">Legal</a>
+            <Link href="/docs">Docs</Link>
+          </p>
           <p className="landing-footer-meta">
             Sepolia to Creditcoin CC3 · precompile 0x…0FD2 · chainKey 1
           </p>

@@ -169,13 +169,37 @@ export function Desk() {
   }, []);
 
   async function faucet() {
-    await ensureSepolia();
-    const hash = await writeContractAsync({
-      address: addresses.sepoliaMockUsd as Address,
-      abi: mockUsdAbi,
-      functionName: "faucet",
-      chainId: SEPOLIA_CHAIN_ID,
-    });
+    if (!address) {
+      setStatus("Connect wallet first.");
+      return;
+    }
+    try {
+      await ensureSepolia();
+    } catch {
+      await addNetworks();
+      await ensureSepolia();
+    }
+    setStatus("Requesting 1,000 mUSD on Sepolia…");
+    let hash: Hex;
+    try {
+      hash = await writeContractAsync({
+        address: addresses.sepoliaMockUsd as Address,
+        abi: mockUsdAbi,
+        functionName: "faucet",
+        chainId: SEPOLIA_CHAIN_ID,
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (/rejected|denied|4001/i.test(msg)) throw err;
+      setStatus("Faucet cooling down — minting 1,000 mUSD…");
+      hash = await writeContractAsync({
+        address: addresses.sepoliaMockUsd as Address,
+        abi: mockUsdAbi,
+        functionName: "mint",
+        args: [address, parseEther("1000")],
+        chainId: SEPOLIA_CHAIN_ID,
+      });
+    }
     setStatus(`Faucet tx ${hash}`);
   }
 
@@ -438,7 +462,7 @@ export function Desk() {
             type="button"
             className="btn"
             disabled={!isConnected || !sepoliaReady}
-            onClick={() => void faucet()}
+            onClick={() => void faucet().catch((e: unknown) => setStatus(e instanceof Error ? e.message : String(e)))}
           >
             Faucet mUSD
           </button>

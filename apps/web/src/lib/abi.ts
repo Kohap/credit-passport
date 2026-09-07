@@ -8,6 +8,21 @@ export const mockUsdAbi = [
   },
   {
     type: "function",
+    name: "mint",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "to", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "error",
+    name: "FaucetCooldown",
+    inputs: [{ name: "nextMintAt", type: "uint256" }],
+  },
+  {
+    type: "function",
     name: "approve",
     stateMutability: "nonpayable",
     inputs: [

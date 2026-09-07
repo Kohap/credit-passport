@@ -27,6 +27,12 @@ export function Landing() {
           Credit Passport
         </Link>
         <nav className="landing-nav-links" aria-label="Primary">
+          <Link href="/docs" className="landing-nav-optional">
+            Docs
+          </Link>
+          <Link href="/deck" className="landing-nav-optional">
+            Deck
+          </Link>
           <Link href="/dossier">Dossier</Link>
           <Link href="/app">Open Desk</Link>
         </nav>

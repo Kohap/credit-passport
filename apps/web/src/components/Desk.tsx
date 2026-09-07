@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ConnectButton } from "@/components/ConnectButton";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   useAccount,
   useChainId,
@@ -75,6 +75,26 @@ export function Desk() {
   const { switchChainAsync } = useSwitchChain();
   const { writeContractAsync } = useWriteContract();
   const sepoliaClient = usePublicClient({ chainId: SEPOLIA_CHAIN_ID });
+
+  const previousAddress = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (previousAddress.current && previousAddress.current !== address) {
+      setFaucetTx(undefined);
+      setRepayTx(undefined);
+      setCreditTx(undefined);
+      setBorrowTx(undefined);
+      setProof(null);
+      setVerified(null);
+      setPhase("idle");
+      setStatus(
+        address
+          ? "Wallet switched. Faucet mUSD with this account."
+          : "Wallet disconnected.",
+      );
+    }
+    previousAddress.current = address;
+  }, [address]);
+
 
   const [loanId, setLoanId] = useState("1");
   const [amount, setAmount] = useState("100");

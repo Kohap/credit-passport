@@ -22,8 +22,7 @@ Lido (single primary CTA), Aave (quiet utility chrome), Spark (numeric/section c
 
 Theme-matched cinematic backgrounds (dark forest / mint haze) adapted from Visual Vault
 (Ameer Talha) language so they sit on `#08110e` without light-blue chinoiserie clash.
-CSS custom properties in `apps/web/src/app/visuals.css` (imported only on `/`).
-JPEG copies also live under `apps/web/public/visuals/` for local preview.
+CSS custom properties in `apps/web/src/app/visuals-forest.css` and `visuals-lake.css` (imported only on `/`).
 Hero: `--visual-hero-forest`. Close: `--visual-hero-lake`.
 
 ## Anti-patterns on this page

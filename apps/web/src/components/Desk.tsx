@@ -10,7 +10,6 @@ import {
   useReadContract,
   useSwitchChain,
   useWriteContract,
-  useWaitForTransactionReceipt,
 } from "wagmi";
 import { formatEther, parseEther, type Address, type Hex } from "viem";
 import {
@@ -111,6 +110,8 @@ export function Desk() {
   const [pasteJson, setPasteJson] = useState("");
   const [faucetTx, setFaucetTx] = useState<Hex | undefined>();
   const [faucetBusy, setFaucetBusy] = useState(false);
+  const [openLoanBusy, setOpenLoanBusy] = useState(false);
+  const [repayBusy, setRepayBusy] = useState(false);
   const [verified, setVerified] = useState<{
     score: string;
     cap: string;
@@ -165,11 +166,6 @@ export function Desk() {
     query: { enabled: creditReady },
   });
 
-  const { isLoading: repayPending } = useWaitForTransactionReceipt({
-    hash: repayTx,
-    chainId: SEPOLIA_CHAIN_ID,
-  });
-
   const ensureSepolia = useCallback(async () => {
     if (chainId !== SEPOLIA_CHAIN_ID) {
       await switchChainAsync({ chainId: SEPOLIA_CHAIN_ID });
@@ -183,12 +179,15 @@ export function Desk() {
   }, [chainId, switchChainAsync]);
 
   const addNetworks = useCallback(async () => {
-    const eth = window.ethereum;
-    if (!eth?.request) {
+    const provider = (await connector?.getProvider()) as
+      | { request?: (args: { method: string; params?: unknown[] }) => Promise<unknown> }
+      | undefined;
+    const request = provider?.request?.bind(provider) ?? window.ethereum?.request?.bind(window.ethereum);
+    if (!request) {
       setStatus("No injected wallet found to add networks.");
       return;
     }
-    await eth.request({
+    await request({
       method: "wallet_addEthereumChain",
       params: [
         {
@@ -200,7 +199,7 @@ export function Desk() {
         },
       ],
     });
-    await eth.request({
+    await request({
       method: "wallet_addEthereumChain",
       params: [
         {
@@ -213,7 +212,14 @@ export function Desk() {
       ],
     });
     setStatus("Sepolia + Creditcoin CC3 added to wallet.");
-  }, []);
+  }, [connector]);
+
+  async function selectedWalletRequest() {
+    const provider = (await connector?.getProvider()) as
+      | { request?: (args: { method: string; params?: unknown[] }) => Promise<unknown> }
+      | undefined;
+    return provider?.request?.bind(provider);
+  }
 
   async function faucet() {
     if (!address) {
@@ -222,10 +228,7 @@ export function Desk() {
     }
     setFaucetBusy(true);
     try {
-      const provider = (await connector?.getProvider()) as
-        | { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> }
-        | undefined;
-      const request = provider?.request?.bind(provider);
+      const request = await selectedWalletRequest();
       const faucetAmount = parseEther("1000");
       const sendMUsd = (functionName: "faucet" | "mint") =>
         sendPopulatedWrite({
@@ -313,48 +316,92 @@ export function Desk() {
   }
 
   async function openLoan() {
-    await ensureSepolia();
-    if (!address) throw new Error("Connect wallet first.");
-    if (!sepoliaClient) throw new Error("Sepolia RPC unavailable.");
-    const principal = parseEther(amount || "100");
-    const hash = await sendPopulatedWrite({
-      publicClient: sepoliaClient,
-      account: address,
-      address: addresses.sepoliaMockMarket as Address,
-      abi: mockMarketAbi,
-      functionName: "openLoan",
-      functionArgs: [principal],
-      chainId: SEPOLIA_CHAIN_ID,
-    });
-    setStatus(`Open loan tx ${hash}`);
+    setOpenLoanBusy(true);
+    try {
+      await ensureSepolia();
+      if (!address) throw new Error("Connect wallet first.");
+      if (!sepoliaClient) throw new Error("Sepolia RPC unavailable.");
+      const principal = parseEther(amount || "100");
+      const hash = await sendPopulatedWrite({
+        publicClient: sepoliaClient,
+        account: address,
+        address: addresses.sepoliaMockMarket as Address,
+        abi: mockMarketAbi,
+        functionName: "openLoan",
+        functionArgs: [principal],
+        chainId: SEPOLIA_CHAIN_ID,
+        request: await selectedWalletRequest(),
+      });
+      setStatus(`Open loan submitted: ${hash}.`);
+    } catch (err: unknown) {
+      setStatus(err instanceof Error ? err.message : String(err));
+    } finally {
+      setOpenLoanBusy(false);
+    }
   }
 
   async function repayLoan() {
-    await ensureSepolia();
-    if (!address) throw new Error("Connect wallet first.");
-    if (!sepoliaClient) throw new Error("Sepolia RPC unavailable.");
-    const value = parseEther(amount || "100");
-    const id = BigInt(loanId || "1");
-    await sendPopulatedWrite({
-      publicClient: sepoliaClient,
-      account: address,
-      address: addresses.sepoliaMockUsd as Address,
-      abi: mockUsdAbi,
-      functionName: "approve",
-      functionArgs: [addresses.sepoliaMockMarket as Address, value],
-      chainId: SEPOLIA_CHAIN_ID,
-    });
-    const hash = await sendPopulatedWrite({
-      publicClient: sepoliaClient,
-      account: address,
-      address: addresses.sepoliaMockMarket as Address,
-      abi: mockMarketAbi,
-      functionName: "repay",
-      functionArgs: [id, value],
-      chainId: SEPOLIA_CHAIN_ID,
-    });
-    setRepayTx(hash);
-    setStatus(`Repay tx ${hash}. Next: prove on Creditcoin.`);
+    setRepayBusy(true);
+    try {
+      await ensureSepolia();
+      if (!address) throw new Error("Connect wallet first.");
+      if (!sepoliaClient) throw new Error("Sepolia RPC unavailable.");
+      const value = parseEther(amount || "100");
+      const id = BigInt(loanId || "1");
+      const request = await selectedWalletRequest();
+      const allowance = await sepoliaClient.readContract({
+        address: addresses.sepoliaMockUsd as Address,
+        abi: mockUsdAbi,
+        functionName: "allowance",
+        args: [address, addresses.sepoliaMockMarket as Address],
+      });
+
+      if (allowance < value) {
+        setStatus("Confirm mUSD approval in your wallet, then wait for Sepolia confirmation.");
+        const approvalHash = await sendPopulatedWrite({
+          publicClient: sepoliaClient,
+          account: address,
+          address: addresses.sepoliaMockUsd as Address,
+          abi: mockUsdAbi,
+          functionName: "approve",
+          functionArgs: [addresses.sepoliaMockMarket as Address, value],
+          chainId: SEPOLIA_CHAIN_ID,
+          request,
+        });
+        const approvalReceipt = await sepoliaClient.waitForTransactionReceipt({
+          hash: approvalHash,
+          timeout: 90_000,
+        });
+        if (approvalReceipt.status === "reverted") {
+          throw new Error("mUSD approval reverted on Sepolia.");
+        }
+      }
+
+      setStatus("Confirm repayment in your wallet.");
+      const hash = await sendPopulatedWrite({
+        publicClient: sepoliaClient,
+        account: address,
+        address: addresses.sepoliaMockMarket as Address,
+        abi: mockMarketAbi,
+        functionName: "repay",
+        functionArgs: [id, value],
+        chainId: SEPOLIA_CHAIN_ID,
+        request,
+      });
+      setRepayTx(hash);
+      const receipt = await sepoliaClient.waitForTransactionReceipt({
+        hash,
+        timeout: 90_000,
+      });
+      if (receipt.status === "reverted") {
+        throw new Error("Repayment reverted on Sepolia.");
+      }
+      setStatus(`Repayment confirmed: ${hash}. Next: prove on Creditcoin.`);
+    } catch (err: unknown) {
+      setStatus(err instanceof Error ? err.message : String(err));
+    } finally {
+      setRepayBusy(false);
+    }
   }
 
   async function submitProveRepayment(payload: ProofPayload) {
@@ -592,18 +639,18 @@ export function Desk() {
           <button
             type="button"
             className="btn"
-            disabled={!isConnected || !sepoliaReady || faucetBusy}
+            disabled={!isConnected || !sepoliaReady || faucetBusy || openLoanBusy || repayBusy}
             onClick={() => void openLoan()}
           >
-            Open loan
+            {openLoanBusy ? "Confirm in wallet…" : "Open loan"}
           </button>
           <button
             type="button"
             className="btn btn-primary"
-            disabled={!isConnected || !sepoliaReady || repayPending || faucetBusy}
+            disabled={!isConnected || !sepoliaReady || repayBusy || faucetBusy || openLoanBusy}
             onClick={() => void repayLoan()}
           >
-            {repayPending ? "Confirming repay…" : "Repay loan"}
+            {repayBusy ? "Confirming repay…" : "Repay loan"}
           </button>
         </div>
         {faucetTx ? (

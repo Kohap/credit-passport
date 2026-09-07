@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useLayoutEffect, useState } from "react";
 
 const PRECOMPILE = "0x0000000000000000000000000000000000000FD2";
 const ASC = "0xc5c9B5A4842B20D945aAD6824A58Afdbb78fecbb";
@@ -84,21 +87,65 @@ const FAQ = [
   },
 ] as const;
 
+
+type LandingTheme = "light" | "dark";
+const THEME_KEY = "cp-landing-theme";
+
+function useLandingTheme() {
+  const [theme, setTheme] = useState<LandingTheme>("dark");
+
+  useLayoutEffect(() => {
+    const stored = window.localStorage.getItem(THEME_KEY);
+    if (stored === "light" || stored === "dark") {
+      setTheme(stored);
+      return;
+    }
+    if (window.matchMedia("(prefers-color-scheme: light)").matches) {
+      setTheme("light");
+    }
+  }, []);
+
+  function toggle() {
+    setTheme((current) => {
+      const next = current === "dark" ? "light" : "dark";
+      window.localStorage.setItem(THEME_KEY, next);
+      return next;
+    });
+  }
+
+  return { theme, toggle };
+}
+
 export function Landing() {
+  const { theme, toggle } = useLandingTheme();
   return (
-    <div className="landing">
+    <div className="landing" data-theme={theme}>
       <header className="landing-nav">
         <Link href="/" className="landing-nav-brand">
           <StampMark />
           Credit Passport
         </Link>
         <nav className="landing-nav-links" aria-label="Primary">
-          <a href="#product">Product</a>
+          <a href="#product" className="landing-nav-strong">
+            Product
+          </a>
           <a href="#developers" className="landing-nav-optional">
             Developers
           </a>
-          <a href="#legal">Legal</a>
-          <Link href="/app">Open Desk</Link>
+          <a href="#legal" className="landing-nav-strong">
+            Legal
+          </a>
+          <Link href="/app" className="landing-nav-strong">
+            Open Desk
+          </Link>
+          <button
+            type="button"
+            className="landing-theme"
+            onClick={toggle}
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {theme === "dark" ? "Light" : "Dark"}
+          </button>
         </nav>
       </header>
 

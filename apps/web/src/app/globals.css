@@ -357,11 +357,40 @@ textarea.input {
 
 /* —— Landing —— */
 .landing {
+  --btn-fill: #15241f;
+  --btn-fill-hover: #1a2d27;
+  --btn-primary-fill: #1f3a31;
+  --btn-primary-hover: #274840;
+  --btn-primary-ink: var(--accent-strong);
+  --veil-top: rgba(8, 17, 14, 0.12);
+  --veil-mid: rgba(8, 17, 14, 0.38);
+  --close-mid: rgba(8, 17, 14, 0.18);
+  --close-end: rgba(8, 17, 14, 0.58);
   min-height: 100vh;
   background: var(--bg0);
   position: relative;
   overflow-x: hidden;
   width: 100%;
+  color-scheme: dark;
+}
+
+.landing[data-theme="light"] {
+  --bg0: #eef3ef;
+  --ink: #102019;
+  --mute: #4d5f56;
+  --line: #c5d0c9;
+  --accent: #3d5c50;
+  --accent-strong: #1c3329;
+  --btn-fill: #e2eae5;
+  --btn-fill-hover: #d5e0da;
+  --btn-primary-fill: #1f3a31;
+  --btn-primary-hover: #274840;
+  --btn-primary-ink: #eef3ef;
+  --veil-top: rgba(238, 243, 239, 0.22);
+  --veil-mid: rgba(238, 243, 239, 0.62);
+  --close-mid: rgba(238, 243, 239, 0.28);
+  --close-end: rgba(238, 243, 239, 0.72);
+  color-scheme: light;
 }
 
 .landing-nav {
@@ -374,6 +403,7 @@ textarea.input {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .landing-nav-brand {
@@ -394,14 +424,49 @@ textarea.input {
   gap: 1.5rem;
 }
 
-.landing-nav-links a {
+.landing-nav-links a,
+.landing-theme {
   color: var(--mute);
   text-decoration: none;
   font-size: 0.95rem;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  background: none;
+  border: 0;
+  padding: 0;
+  font-family: inherit;
+  cursor: pointer;
 }
 
-.landing-nav-links a:hover {
+.landing-nav-links a:hover,
+.landing-theme:hover {
   color: var(--ink);
+}
+
+.landing-nav-links a.landing-nav-strong {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.landing .btn {
+  background: var(--btn-fill);
+  color: var(--ink);
+}
+
+.landing .btn:hover:not(:disabled) {
+  background: var(--btn-fill-hover);
+  color: var(--ink);
+}
+
+.landing .btn-primary {
+  background: var(--btn-primary-fill);
+  color: var(--btn-primary-ink);
+}
+
+.landing .btn-primary:hover:not(:disabled) {
+  background: var(--btn-primary-hover);
+  color: var(--btn-primary-ink);
 }
 
 .landing-hero {
@@ -451,8 +516,8 @@ textarea.input {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(8, 17, 14, 0.12) 0%, rgba(8, 17, 14, 0.38) 58%, var(--bg0) 100%),
-    linear-gradient(90deg, rgba(8, 17, 14, 0.28) 0%, transparent 48%);
+    linear-gradient(180deg, var(--veil-top) 0%, var(--veil-mid) 58%, var(--bg0) 100%),
+    linear-gradient(90deg, color-mix(in srgb, var(--bg0) 28%, transparent) 0%, transparent 48%);
   pointer-events: none;
 }
 
@@ -661,8 +726,8 @@ a.btn {
   background: linear-gradient(
     180deg,
     var(--bg0) 0%,
-    rgba(8, 17, 14, 0.18) 32%,
-    rgba(8, 17, 14, 0.58) 100%
+    var(--close-mid) 32%,
+    var(--close-end) 100%
   );
   pointer-events: none;
 }

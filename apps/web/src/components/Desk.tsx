@@ -6,6 +6,7 @@ import { useCallback, useMemo, useState } from "react";
 import {
   useAccount,
   useChainId,
+  usePublicClient,
   useReadContract,
   useSwitchChain,
   useWriteContract,
@@ -51,11 +52,28 @@ function isConfigured(addr: string): boolean {
   return /^0x[0-9a-fA-F]{40}$/.test(addr) && !/^0x0+$/.test(addr.slice(2));
 }
 
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
+}
+
 export function Desk() {
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
   const { switchChainAsync } = useSwitchChain();
   const { writeContractAsync } = useWriteContract();
+  const sepoliaClient = usePublicClient({ chainId: SEPOLIA_CHAIN_ID });
 
   const [loanId, setLoanId] = useState("1");
   const [amount, setAmount] = useState("100");
@@ -70,6 +88,8 @@ export function Desk() {
   const [scoreBefore, setScoreBefore] = useState<string | null>(null);
   const [corsFallback, setCorsFallback] = useState(false);
   const [pasteJson, setPasteJson] = useState("");
+  const [faucetTx, setFaucetTx] = useState<Hex | undefined>();
+  const [faucetBusy, setFaucetBusy] = useState(false);
   const [verified, setVerified] = useState<{
     score: string;
     cap: string;
@@ -78,6 +98,15 @@ export function Desk() {
 
   const sepoliaReady = isConfigured(addresses.sepoliaMockMarket);
   const creditReady = isConfigured(addresses.creditPassportAsc);
+
+  const { data: musd, refetch: refetchMusd } = useReadContract({
+    address: addresses.sepoliaMockUsd as Address,
+    abi: mockUsdAbi,
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+    chainId: SEPOLIA_CHAIN_ID,
+    query: { enabled: Boolean(address) && sepoliaReady },
+  });
 
   const { data: score, refetch: refetchScore } = useReadContract({
     address: addresses.creditScore as Address,
@@ -173,34 +202,108 @@ export function Desk() {
       setStatus("Connect wallet first.");
       return;
     }
+    setFaucetBusy(true);
+    setStatus("Switching to Sepolia — confirm in the wallet if asked…");
     try {
-      await ensureSepolia();
-    } catch {
-      await addNetworks();
-      await ensureSepolia();
+      try {
+        await withTimeout(
+          ensureSepolia(),
+          25_000,
+          "Wallet did not switch to Sepolia. Open MetaMask, switch to Sepolia, then retry.",
+        );
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (/did not switch/i.test(msg)) throw err;
+        setStatus("Adding Sepolia to the wallet…");
+        await withTimeout(
+          addNetworks(),
+          45_000,
+          "Wallet did not add Sepolia. Open MetaMask and approve the network, then retry.",
+        );
+        await withTimeout(
+          ensureSepolia(),
+          25_000,
+          "Wallet did not switch to Sepolia. Switch network in MetaMask, then retry.",
+        );
+      }
+
+      const amountWei = parseEther("1000");
+      let useHourlyFaucet = false;
+      try {
+        if (sepoliaClient) {
+          const last = await withTimeout(
+            sepoliaClient.readContract({
+              address: addresses.sepoliaMockUsd as Address,
+              abi: mockUsdAbi,
+              functionName: "lastFaucetAt",
+              args: [address],
+            }),
+            8_000,
+            "rpc",
+          );
+          const now = BigInt(Math.floor(Date.now() / 1000));
+          useHourlyFaucet = last === 0n || now >= last + 3600n;
+        }
+      } catch {
+        useHourlyFaucet = false;
+      }
+
+      setStatus(
+        useHourlyFaucet
+          ? "Confirm 1,000 mUSD in the wallet…"
+          : "Hourly faucet already used — confirm mint of 1,000 mUSD…",
+      );
+
+      let hash: Hex;
+      try {
+        hash = useHourlyFaucet
+          ? await writeContractAsync({
+              address: addresses.sepoliaMockUsd as Address,
+              abi: mockUsdAbi,
+              functionName: "faucet",
+              chainId: SEPOLIA_CHAIN_ID,
+            })
+          : await writeContractAsync({
+              address: addresses.sepoliaMockUsd as Address,
+              abi: mockUsdAbi,
+              functionName: "mint",
+              args: [address, amountWei],
+              chainId: SEPOLIA_CHAIN_ID,
+            });
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (/rejected|denied|4001/i.test(msg)) throw err;
+        setStatus("Confirm mint of 1,000 mUSD in the wallet…");
+        hash = await writeContractAsync({
+          address: addresses.sepoliaMockUsd as Address,
+          abi: mockUsdAbi,
+          functionName: "mint",
+          args: [address, amountWei],
+          chainId: SEPOLIA_CHAIN_ID,
+        });
+      }
+
+      setFaucetTx(hash);
+      setStatus("Waiting for Sepolia confirmation…");
+      if (sepoliaClient) {
+        const receipt = await sepoliaClient.waitForTransactionReceipt({
+          hash,
+          timeout: 90_000,
+        });
+        if (receipt.status === "reverted") {
+          throw new Error("Faucet transaction reverted on Sepolia.");
+        }
+      }
+      const refreshed = await refetchMusd();
+      const bal = refreshed.data;
+      const shown =
+        bal !== undefined
+          ? `${Number(formatEther(bal)).toLocaleString()} mUSD`
+          : "1,000 mUSD";
+      setStatus(`Received. Balance ${shown}.`);
+    } finally {
+      setFaucetBusy(false);
     }
-    setStatus("Requesting 1,000 mUSD on Sepolia…");
-    let hash: Hex;
-    try {
-      hash = await writeContractAsync({
-        address: addresses.sepoliaMockUsd as Address,
-        abi: mockUsdAbi,
-        functionName: "faucet",
-        chainId: SEPOLIA_CHAIN_ID,
-      });
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (/rejected|denied|4001/i.test(msg)) throw err;
-      setStatus("Faucet cooling down — minting 1,000 mUSD…");
-      hash = await writeContractAsync({
-        address: addresses.sepoliaMockUsd as Address,
-        abi: mockUsdAbi,
-        functionName: "mint",
-        args: [address, parseEther("1000")],
-        chainId: SEPOLIA_CHAIN_ID,
-      });
-    }
-    setStatus(`Faucet tx ${hash}`);
   }
 
   async function openLoan() {
@@ -441,6 +544,10 @@ export function Desk() {
           <span className="section-kicker">Step 01</span>
         </div>
         <p>Faucet mUSD, open a loan, then repay to emit LoanRepaid.</p>
+        <p className="tx-line mono">
+          Sepolia mUSD{" "}
+          {musd !== undefined ? Number(formatEther(musd)).toLocaleString() : "—"}
+        </p>
         <div className="field-row">
           <input
             className="input"
@@ -461,15 +568,15 @@ export function Desk() {
           <button
             type="button"
             className="btn"
-            disabled={!isConnected || !sepoliaReady}
+            disabled={!isConnected || !sepoliaReady || faucetBusy}
             onClick={() => void faucet().catch((e: unknown) => setStatus(e instanceof Error ? e.message : String(e)))}
           >
-            Faucet mUSD
+            {faucetBusy ? "Confirm in wallet…" : "Faucet mUSD"}
           </button>
           <button
             type="button"
             className="btn"
-            disabled={!isConnected || !sepoliaReady}
+            disabled={!isConnected || !sepoliaReady || faucetBusy}
             onClick={() => void openLoan()}
           >
             Open loan
@@ -477,12 +584,20 @@ export function Desk() {
           <button
             type="button"
             className="btn btn-primary"
-            disabled={!isConnected || !sepoliaReady || repayPending}
+            disabled={!isConnected || !sepoliaReady || repayPending || faucetBusy}
             onClick={() => void repayLoan()}
           >
             {repayPending ? "Confirming repay…" : "Repay loan"}
           </button>
         </div>
+        {faucetTx ? (
+          <p className="tx-line mono">
+            Sepolia faucet:{" "}
+            <a href={`${SEPOLIA_EXPLORER}/tx/${faucetTx}`} target="_blank" rel="noreferrer">
+              {faucetTx}
+            </a>
+          </p>
+        ) : null}
         {repayTx ? (
           <p className="tx-line mono">
             Sepolia repay:{" "}

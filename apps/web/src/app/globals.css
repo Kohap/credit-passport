@@ -360,6 +360,8 @@ textarea.input {
   min-height: 100vh;
   background: var(--bg0);
   position: relative;
+  overflow-x: hidden;
+  width: 100%;
 }
 
 .landing-nav {
@@ -617,7 +619,7 @@ a.btn {
 .landing-close {
   position: relative;
   isolation: isolate;
-  margin: 2rem calc(50% - 50vw) 0;
+  margin: 2rem 0 0;
   padding: 4.5rem max(1rem, calc(50vw - 320px)) 3.5rem;
   border-top: none;
   min-height: 22rem;

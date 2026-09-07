@@ -1,0 +1,16 @@
+.landing-nav-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.landing-mark {
+  display: block;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+}
+
+.landing-hero-aside .hero-actions {
+  margin-top: 0.15rem;
+}

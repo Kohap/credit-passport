@@ -11,7 +11,7 @@ import {
   useSwitchChain,
   useWriteContract,
 } from "wagmi";
-import { formatEther, parseEther, type Address, type Hex } from "viem";
+import { formatEther, parseEther, parseEventLogs, type Address, type Hex } from "viem";
 import {
   ATTESTOR_DASHBOARD,
   CREDITCOIN_CHAIN_ID,
@@ -95,7 +95,7 @@ export function Desk() {
   }, [address]);
 
 
-  const [loanId, setLoanId] = useState("1");
+  const [loanId, setLoanId] = useState("");
   const [amount, setAmount] = useState("100");
   const [repayTx, setRepayTx] = useState<Hex | undefined>();
   const [phase, setPhase] = useState<ProvePhase>("idle");
@@ -332,7 +332,27 @@ export function Desk() {
         chainId: SEPOLIA_CHAIN_ID,
         request: await selectedWalletRequest(),
       });
-      setStatus(`Open loan submitted: ${hash}.`);
+      setStatus("Waiting for loan confirmation on Sepolia…");
+      const receipt = await sepoliaClient.waitForTransactionReceipt({
+        hash,
+        timeout: 90_000,
+      });
+      if (receipt.status === "reverted") {
+        throw new Error("Opening the loan reverted on Sepolia.");
+      }
+      const opened = parseEventLogs({
+        abi: mockMarketAbi,
+        eventName: "LoanOpened",
+        logs: receipt.logs,
+      }).find(
+        (log) => log.address.toLowerCase() === addresses.sepoliaMockMarket.toLowerCase(),
+      );
+      const openedLoanId = opened?.args.loanId;
+      if (openedLoanId === undefined) {
+        throw new Error("Loan opened, but its ID was not found in the receipt.");
+      }
+      setLoanId(openedLoanId.toString());
+      setStatus(`Loan #${openedLoanId} confirmed. Repay this loan next.`);
     } catch (err: unknown) {
       setStatus(err instanceof Error ? err.message : String(err));
     } finally {
@@ -347,8 +367,29 @@ export function Desk() {
       if (!address) throw new Error("Connect wallet first.");
       if (!sepoliaClient) throw new Error("Sepolia RPC unavailable.");
       const value = parseEther(amount || "100");
-      const id = BigInt(loanId || "1");
+      if (!loanId.trim()) {
+        throw new Error("Open a loan first. Its confirmed loan ID will appear here automatically.");
+      }
+      const id = BigInt(loanId);
       const request = await selectedWalletRequest();
+      const loan = await sepoliaClient.readContract({
+        address: addresses.sepoliaMockMarket as Address,
+        abi: mockMarketAbi,
+        functionName: "loans",
+        args: [id],
+      });
+      const [borrower, , debt, active] = loan;
+      if (!active) {
+        throw new Error(`Loan #${id} is not active. Open a loan before repaying.`);
+      }
+      if (borrower.toLowerCase() !== address.toLowerCase()) {
+        throw new Error(`Loan #${id} belongs to a different wallet.`);
+      }
+      if (value > debt) {
+        throw new Error(
+          `Loan #${id} has ${formatEther(debt)} mUSD remaining. Lower the repayment amount.`,
+        );
+      }
       const allowance = await sepoliaClient.readContract({
         address: addresses.sepoliaMockUsd as Address,
         abi: mockUsdAbi,
@@ -623,7 +664,7 @@ export function Desk() {
             className="input"
             value={loanId}
             onChange={(e) => setLoanId(e.target.value)}
-            placeholder="loanId"
+            placeholder="loan ID (set after opening)"
             aria-label="Loan ID"
           />
         </div>

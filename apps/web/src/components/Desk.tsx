@@ -132,6 +132,20 @@ function formatAttestationEstimate(remainingBlocks: number) {
   return `about ${Math.ceil(seconds / 60)} min`;
 }
 
+function ActiveLoansSkeleton() {
+  return (
+    <div className="loan-skeletons" aria-hidden="true">
+      {["one", "two", "three"].map((row) => (
+        <div className="loan-skeleton" key={row}>
+          <span className="skeleton-line skeleton-loan-id" />
+          <span className="skeleton-line skeleton-loan-debt" />
+          <span className="skeleton-line skeleton-loan-principal" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function Desk() {
   const { address, isConnected, connector } = useAccount();
   const chainId = useChainId();
@@ -827,11 +841,36 @@ export function Desk() {
     }
   }
 
-  const phaseClass = useMemo(() => {
-    if (phase === "verified" || phase === "proof_ready") return "status ok";
-    if (phase === "error") return "status bad";
-    return "status";
-  }, [phase]);
+  const statusTone = useMemo(() => {
+    if (phase === "verified" || phase === "proof_ready") return "success";
+    if (
+      phase === "error" ||
+      /(?:error|failed|reverted|unavailable|cannot|no active|need |outside|belongs to)/i.test(
+        status,
+      )
+    ) {
+      return "danger";
+    }
+    if (
+      phase === "waiting_source" ||
+      phase === "waiting_attestation" ||
+      phase === "generating_proof" ||
+      phase === "submitting" ||
+      faucetBusy ||
+      openLoanBusy ||
+      repayBusy
+    ) {
+      return "progress";
+    }
+    return "info";
+  }, [faucetBusy, openLoanBusy, phase, repayBusy, status]);
+
+  const statusLabel = useMemo(() => {
+    if (statusTone === "success") return "Complete";
+    if (statusTone === "danger") return "Action needed";
+    if (statusTone === "progress") return "In progress";
+    return "Status";
+  }, [statusTone]);
 
   const cliCmd = repayTx
     ? `npm run prove -- ${repayTx} --json-out proof.json`
@@ -914,43 +953,56 @@ export function Desk() {
           Sepolia mUSD{" "}
           {musd !== undefined ? Number(formatEther(musd)).toLocaleString() : "—"}
         </p>
-        <div className="loan-dashboard" aria-live="polite">
+        <div className="loan-dashboard" aria-busy={activeLoansBusy} aria-describedby="active-loans-help">
           <div className="loan-dashboard-head">
             <div>
               <span className="loan-dashboard-label">Active loans</span>
               <strong>
                 {activeLoansBusy
-                  ? "Checking Sepolia…"
+                  ? "Loading loans"
                   : activeLoans.length
                     ? `${activeLoans.length} open`
-                    : "None open"}
+                    : "No open loans"}
               </strong>
             </div>
             {activeLoans.length ? (
               <span className="loan-total">{formatEther(activeLoanDebt)} mUSD due</span>
             ) : null}
           </div>
-          {activeLoans.map((loan) => {
-            const selected = loanId === loan.id.toString() && !repayAll;
-            return (
-              <button
-                key={loan.id.toString()}
-                type="button"
-                className="loan-row"
-                aria-pressed={selected}
-                disabled={repayBusy || openLoanBusy}
-                onClick={() => {
-                  setRepayAll(false);
-                  setLoanId(loan.id.toString());
-                  setAmount(formatEther(loan.debt));
-                }}
-              >
-                <span>Loan #{loan.id}</span>
-                <span>{formatEther(loan.debt)} mUSD due</span>
-                <span>{formatEther(loan.principal)} mUSD opened</span>
-              </button>
-            );
-          })}
+          <p className="sr-only" id="active-loans-help" role="status">
+            {activeLoansBusy
+              ? "Loading active loans from Sepolia."
+              : activeLoans.length
+                ? "Choose a loan to fill in its repayment details, or repay every active loan."
+                : "Open a loan to continue with a repayment."}
+          </p>
+          {activeLoansBusy ? <ActiveLoansSkeleton /> : null}
+          {!activeLoansBusy && activeLoans.length ? (
+            <div className="loan-list" role="group" aria-label="Choose an active loan to repay">
+              {activeLoans.map((loan) => {
+                const selected = loanId === loan.id.toString() && !repayAll;
+                return (
+                  <button
+                    key={loan.id.toString()}
+                    type="button"
+                    className="loan-row"
+                    aria-pressed={selected}
+                    disabled={repayBusy || openLoanBusy}
+                    onClick={() => {
+                      setRepayAll(false);
+                      setLoanId(loan.id.toString());
+                      setAmount(formatEther(loan.debt));
+                    }}
+                  >
+                    <span className="loan-row-id">Loan #{loan.id}</span>
+                    <span className="loan-row-debt">{formatEther(loan.debt)} mUSD due</span>
+                    <span className="loan-row-principal">{formatEther(loan.principal)} mUSD opened</span>
+                    <span className="loan-row-selection">{selected ? "Selected" : "Select"}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
           <label className="loan-toggle">
             <input
               type="checkbox"
@@ -962,24 +1014,36 @@ export function Desk() {
             {repayAll ? <small>{formatEther(activeLoanDebt)} mUSD across {activeLoans.length} loans</small> : null}
           </label>
         </div>
-        <div className="field-row">
-          <input
-            className="input"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="amount (ether units)"
-            aria-label="Loan amount"
-            disabled={repayAll}
-          />
-          <input
-            className="input"
-            value={loanId}
-            onChange={(e) => setLoanId(e.target.value)}
-            placeholder="loan ID (set after opening)"
-            aria-label="Loan ID"
-            disabled={repayAll}
-          />
-        </div>
+        <fieldset className="loan-fields" disabled={repayAll}>
+          <legend>Repayment details</legend>
+          <p id="repayment-help" className="field-help">
+            Select an active loan above or enter its ID. The repayment amount cannot exceed its outstanding balance.
+          </p>
+          <div className="field-row">
+            <label className="field-label" htmlFor="repayment-amount">
+              <span>Amount (mUSD)</span>
+              <input
+                id="repayment-amount"
+                className="input"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                inputMode="decimal"
+                aria-describedby="repayment-help"
+              />
+            </label>
+            <label className="field-label" htmlFor="repayment-loan-id">
+              <span>Loan ID</span>
+              <input
+                id="repayment-loan-id"
+                className="input"
+                value={loanId}
+                onChange={(e) => setLoanId(e.target.value)}
+                inputMode="numeric"
+                aria-describedby="repayment-help"
+              />
+            </label>
+          </div>
+        </fieldset>
         <div className="actions">
           <button
             type="button"
@@ -1047,8 +1111,15 @@ export function Desk() {
                 : "Prove repayment"}
           </button>
         </div>
-        <p className={phaseClass} role="status" aria-live="polite">
-          [{phase}] {status}
+        <p
+          className="status"
+          data-tone={statusTone}
+          role={statusTone === "danger" ? "alert" : "status"}
+          aria-live={statusTone === "danger" ? "assertive" : "polite"}
+          aria-atomic="true"
+        >
+          <strong>{statusLabel}</strong>
+          <span>{status}</span>
         </p>
         {creditTx ? (
           <p className="tx-line mono">
@@ -1060,8 +1131,8 @@ export function Desk() {
         ) : null}
 
         {corsFallback ? (
-          <div className="cors-panel">
-            <h2 style={{ fontSize: "1.25rem", marginBottom: "0.5rem" }}>CLI proof fallback</h2>
+          <div className="cors-panel" aria-labelledby="cli-fallback-title">
+            <h2 id="cli-fallback-title">CLI proof fallback</h2>
             <p>
               The browser cannot reach the proof service. Run this locally, then paste{" "}
               <span className="mono">proof.json</span>.
@@ -1069,13 +1140,17 @@ export function Desk() {
             <p className="mono">{cliCmd}</p>
             <p className="mono tx-line">Sepolia tx: {repayTx ?? "-"}</p>
             <textarea
+              id="pasted-proof"
               className="input"
-              style={{ marginTop: "0.75rem" }}
               placeholder="Paste proof.json from: npm run prove -- <tx> --json-out proof.json"
               value={pasteJson}
               onChange={(e) => setPasteJson(e.target.value)}
-              aria-label="Paste proof JSON"
+              aria-label="Proof JSON"
+              aria-describedby="cli-fallback-help"
             />
+            <p id="cli-fallback-help" className="sr-only">
+              Paste the complete proof JSON generated by the command above.
+            </p>
             <div className="actions">
               <button
                 type="button"

@@ -68,7 +68,7 @@ const INSTRUMENTS = [
   },
   {
     title: "Score",
-    body: "+40 on the first verified repayment, +20 on each later one, +10 if remainingDebt is zero. Capped at 100.",
+    body: "+50 on the first fully repaid verified loan, then +30 for later fully repaid verified loans. Capped at 100.",
   },
   {
     title: "CreditLine",

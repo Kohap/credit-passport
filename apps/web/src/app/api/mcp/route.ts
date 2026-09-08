@@ -1,52 +1,28 @@
-import type { ServerResponse } from "node:http";
-import type { NextRequest } from "next/server";
-import handler from "../../../../api/mcp";
+import { NextResponse, type NextRequest } from "next/server";
+import { handleMcp } from "@/lib/mcp";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type CapturedResponse = {
-  statusCode: number;
-  headers: Headers;
-  body: string;
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "content-type, mcp-protocol-version, mcp-session-id",
+  "Cache-Control": "no-store",
+  "Vary": "Origin",
+  "X-Content-Type-Options": "nosniff",
 };
 
-async function runMcpHandler(request: NextRequest): Promise<Response> {
-  const body = await request.text();
-
-  return new Promise((resolve) => {
-    const captured: CapturedResponse = { statusCode: 200, headers: new Headers(), body: "" };
-    const response = {
-      get statusCode() {
-        return captured.statusCode;
-      },
-      set statusCode(value: number) {
-        captured.statusCode = value;
-      },
-      setHeader(name: string, value: number | string | readonly string[]) {
-        captured.headers.set(name, Array.isArray(value) ? value.join(", ") : String(value));
-      },
-      end(value?: string) {
-        captured.body = value ?? "";
-        resolve(new Response(captured.body, { status: captured.statusCode, headers: captured.headers }));
-      },
-    } as unknown as ServerResponse;
-
-    void handler(
-      {
-        method: request.method,
-        headers: Object.fromEntries(request.headers.entries()),
-        body,
-      } as never,
-      response,
-    );
-  });
+function requester(request: NextRequest) {
+  return request.headers.get("x-forwarded-for")?.split(",")[0].trim() || "anonymous";
 }
 
 export async function POST(request: NextRequest) {
-  return runMcpHandler(request);
+  const response = await handleMcp(await request.text(), requester(request));
+  if (response.body === null) return new NextResponse(null, { status: response.status, headers: corsHeaders });
+  return NextResponse.json(response.body, { status: response.status, headers: corsHeaders });
 }
 
-export async function OPTIONS(request: NextRequest) {
-  return runMcpHandler(request);
+export function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: corsHeaders });
 }

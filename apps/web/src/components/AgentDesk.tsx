@@ -357,7 +357,7 @@ export function AgentDesk() {
   }
 
   async function proveCompletion() {
-    if (!isHash(completionTx)) throw new Error("Paste the Sepolia JobCompleted transaction hash first.");
+    if (!isHash(completionTx)) throw new Error("Paste the payment receipt ID first.");
     setProofBusy(true);
     setShowProofFallback(false);
     try {
@@ -372,7 +372,7 @@ export function AgentDesk() {
   }
 
   async function submitPastedProof() {
-    if (!isHash(completionTx)) throw new Error("Paste the Sepolia JobCompleted transaction hash first.");
+    if (!isHash(completionTx)) throw new Error("Paste the payment receipt ID first.");
     const pasted = parsePastableProof(proofJson, completionTx);
     await submitProof(pasted);
   }

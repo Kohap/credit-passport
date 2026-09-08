@@ -32,10 +32,11 @@ while IFS= read -r commit; do
     git grep -I -l -E -e "$PATTERN" "$commit" -- . ':(exclude).env.example'
 done < <(git rev-list --all)
 
-while IFS= read -r -d '' env_file; do
-  [[ "$(basename "$env_file")" == ".env.example" ]] && continue
-  report_matches "local file ${env_file#./}" rg -l -I -E "$PATTERN" "$env_file"
-done < <(find . -type f -name '.env*' -print0)
+# Ignored .env files are allowed to hold local deployment credentials. Tracked files
+# and every reachable commit above are still scanned; this catches anything that can ship.
+while IFS= read -r -d '' local_file; do
+  report_matches "untracked file ${local_file#./}" rg -l -I -e "$PATTERN" "$local_file"
+done < <(git ls-files --others --exclude-standard -z)
 
 if [[ "$found" -ne 0 ]]; then
   echo "Secret scan failed. Revoke any real credential before rewriting history." >&2

@@ -223,6 +223,7 @@ export function Desk() {
   const [faucetBusy, setFaucetBusy] = useState(false);
   const [openLoanBusy, setOpenLoanBusy] = useState(false);
   const [repayBusy, setRepayBusy] = useState(false);
+  const [borrowBusy, setBorrowBusy] = useState(false);
   const [repayAll, setRepayAll] = useState(false);
   const [activeLoans, setActiveLoans] = useState<ActiveLoan[]>([]);
   const [activeLoansBusy, setActiveLoansBusy] = useState(false);
@@ -818,7 +819,7 @@ export function Desk() {
     try {
       const payload = parsePastableProof(pasteJson, repayTx);
       if (!payload.txBytes || !payload.merkleRoot) {
-        throw new Error("Paste JSON missing txBytes / merkleRoot");
+        throw new Error("The proof file is incomplete. Create it again from the manual verification guide.");
       }
       setProof(payload);
       if (payload.sepoliaTxHash && !repayTx) {
@@ -832,13 +833,15 @@ export function Desk() {
   }
 
   async function borrowOnCreditcoin() {
+    if (borrowBusy) return;
+    setBorrowBusy(true);
     try {
       if (!address) throw new Error("Connect wallet first.");
       if (!creditcoinClient) throw new Error("Creditcoin RPC unavailable.");
       const demoAmount = parseEther("10");
       if (lineBalance !== undefined && lineBalance < demoAmount) {
         setStatus(
-          "CreditLine has no mUSD liquidity. Run the fund script: bash scripts/fund-creditline.sh",
+          "The demo credit pool needs refilling. Please try again later.",
         );
         setPhase("error");
         return;
@@ -860,12 +863,14 @@ export function Desk() {
       const msg = err instanceof Error ? err.message : String(err);
       if (/transfer|insufficient|exceeds balance|ERC20/i.test(msg)) {
         setStatus(
-          "CreditLine has no mUSD liquidity. Run the fund script: bash scripts/fund-creditline.sh",
+          "The demo credit pool needs refilling. Please try again later.",
         );
       } else {
         setStatus(msg);
       }
       setPhase("error");
+    } finally {
+      setBorrowBusy(false);
     }
   }
 
@@ -886,12 +891,13 @@ export function Desk() {
       phase === "submitting" ||
       faucetBusy ||
       openLoanBusy ||
-      repayBusy
+      repayBusy ||
+      borrowBusy
     ) {
       return "progress";
     }
     return "info";
-  }, [faucetBusy, openLoanBusy, phase, repayBusy, status]);
+  }, [borrowBusy, faucetBusy, openLoanBusy, phase, repayBusy, status]);
 
   const statusLabel = useMemo(() => {
     if (statusTone === "success") return "Complete";
@@ -919,6 +925,7 @@ export function Desk() {
     phase === "generating_proof" ||
     phase === "waiting_attestation" ||
     phase === "submitting";
+  const loanActionBusy = faucetBusy || openLoanBusy || repayBusy;
 
   const passportTokenId =
     tokenId !== undefined && tokenId !== 0n
@@ -1058,7 +1065,7 @@ export function Desk() {
                     type="button"
                     className="loan-row"
                     aria-pressed={selected}
-                    disabled={repayBusy || openLoanBusy}
+                    disabled={loanActionBusy}
                     onClick={() => {
                       setRepayAll(false);
                       setLoanId(loan.id.toString());
@@ -1078,7 +1085,7 @@ export function Desk() {
             <input
               type="checkbox"
               checked={repayAll}
-              disabled={!activeLoans.length || repayBusy || openLoanBusy}
+              disabled={!activeLoans.length || loanActionBusy}
               onChange={(event) => setRepayAll(event.target.checked)}
             />
             <span>Repay all active loans</span>
@@ -1119,7 +1126,7 @@ export function Desk() {
           <button
             type="button"
             className="btn"
-            disabled={!isConnected || !sepoliaReady || faucetBusy}
+            disabled={!isConnected || !sepoliaReady || loanActionBusy}
             onClick={() => void faucet().catch((e: unknown) => setStatus(e instanceof Error ? e.message : String(e)))}
           >
             {faucetBusy ? "Confirm in wallet…" : "Get demo funds"}
@@ -1127,7 +1134,7 @@ export function Desk() {
           <button
             type="button"
             className="btn"
-            disabled={!isConnected || !sepoliaReady || faucetBusy || openLoanBusy || repayBusy}
+            disabled={!isConnected || !sepoliaReady || loanActionBusy}
             onClick={() => void openLoan()}
           >
             {openLoanBusy ? "Confirm in wallet…" : "Open 100 mUSD loan"}
@@ -1135,7 +1142,7 @@ export function Desk() {
           <button
             type="button"
             className="btn btn-primary"
-            disabled={!isConnected || !sepoliaReady || repayBusy || faucetBusy || openLoanBusy}
+            disabled={!isConnected || !sepoliaReady || loanActionBusy}
             onClick={() => void repayLoan()}
           >
             {repayBusy ? "Confirming repayment…" : "Repay selected loan"}
@@ -1222,7 +1229,7 @@ export function Desk() {
               <button
                 type="button"
                 className="btn btn-primary"
-                disabled={!isConnected || !creditReady || !pasteJson.trim()}
+                disabled={!isConnected || !creditReady || !pasteJson.trim() || proveBusy}
                 onClick={() => void submitPastedProof()}
               >
                 Submit verification
@@ -1242,10 +1249,10 @@ export function Desk() {
           <button
             type="button"
             className="btn btn-primary"
-            disabled={!isConnected || !creditReady || phase !== "verified"}
+            disabled={!isConnected || !creditReady || phase !== "verified" || borrowBusy}
             onClick={() => void borrowOnCreditcoin()}
           >
-            Borrow 10 mUSD (demo)
+            {borrowBusy ? "Confirm in wallet..." : "Borrow 10 mUSD (demo)"}
           </button>
         </div>
         {borrowTx ? (

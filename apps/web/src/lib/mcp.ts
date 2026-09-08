@@ -21,9 +21,10 @@ type RpcRequest = {
 };
 
 const PROTOCOL_VERSION = "2025-06-18";
-const MAX_BODY_BYTES = 64_000;
+export const MAX_MCP_BODY_BYTES = 64_000;
 const RATE_WINDOW_MS = 60_000;
 const RATE_LIMIT = 30;
+const MAX_REQUESTERS = 500;
 const requests = new Map<string, { count: number; resetAt: number }>();
 const APP_ORIGIN = DESK_URL.replace(/\/$/, "");
 
@@ -41,6 +42,11 @@ function error(id: RpcRequest["id"], code: number, message: string) {
 
 function rateLimited(requester: string): boolean {
   const now = Date.now();
+  if (requests.size >= MAX_REQUESTERS) {
+    for (const [key, entry] of requests) {
+      if (entry.resetAt <= now) requests.delete(key);
+    }
+  }
   const current = requests.get(requester);
 
   if (!current || current.resetAt <= now) {
@@ -174,7 +180,7 @@ export async function handleMcp(body: string, requester: string) {
   if (rateLimited(requester)) return { status: 429, body: error(null, -32029, "Too many requests. Try again in a minute.") };
 
   try {
-    if (!body || body.length > MAX_BODY_BYTES) throw new Error("Request body is too large.");
+    if (!body || body.length > MAX_MCP_BODY_BYTES) throw new Error("Request body is too large.");
     const rpc = JSON.parse(body) as RpcRequest;
     if (rpc.jsonrpc !== "2.0" || typeof rpc.method !== "string") {
       return { status: 200, body: error(rpc.id, -32600, "Invalid JSON-RPC request.") };

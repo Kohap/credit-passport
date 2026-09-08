@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { handleMcp } from "@/lib/mcp";
+import { handleMcp, MAX_MCP_BODY_BYTES } from "@/lib/mcp";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,6 +18,13 @@ function requester(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const contentLength = Number(request.headers.get("content-length"));
+  if (Number.isFinite(contentLength) && contentLength > MAX_MCP_BODY_BYTES) {
+    return NextResponse.json(
+      { jsonrpc: "2.0", id: null, error: { code: -32000, message: "Request body is too large." } },
+      { status: 413, headers: corsHeaders },
+    );
+  }
   const response = await handleMcp(await request.text(), requester(request));
   if (response.body === null) return new NextResponse(null, { status: response.status, headers: corsHeaders });
   return NextResponse.json(response.body, { status: response.status, headers: corsHeaders });

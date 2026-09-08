@@ -22,8 +22,7 @@ contract DeployCreditcoin is Script {
         CreditScore score = new CreditScore(deployer);
         CreditLine line = new CreditLine(address(usd), deployer);
         PassportNFT nft = new PassportNFT(deployer);
-        CreditPassportASC asc =
-            new CreditPassportASC(sepoliaMarket, address(score), address(line), address(nft));
+        CreditPassportASC asc = new CreditPassportASC(sepoliaMarket, address(score), address(line), address(nft));
 
         score.setWriter(address(asc));
         line.setUpdater(address(asc));

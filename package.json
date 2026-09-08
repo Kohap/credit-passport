@@ -19,6 +19,7 @@
     "security:check": "npm run security:secrets && npm run security:dependencies",
     "prove": "npm run prove --workspace=packages/worker --",
     "deploy:testnets": "bash scripts/deploy-all.sh",
+    "deploy:agent-passport": "bash scripts/deploy-agent-passport.sh",
     "dev:web": "npm run dev --workspace=apps/web",
     "build:web": "npm run build --workspace=apps/web",
     "build:pages": "GITHUB_PAGES=true npm run build --workspace=apps/web"

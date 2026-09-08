@@ -42,6 +42,10 @@ The borrower uses the same wallet on Sepolia and Creditcoin. No oracle operator 
 
 The previous v1 proof is deliberately not presented as evidence for the new trusted-market deployment.
 
+## Agent Passport alpha
+
+The repository also contains an isolated, **not-yet-deployed** Agent Passport extension: client-funded Sepolia job escrow, a committed offchain work result, and Attestcoin-verified completion on Creditcoin. Its trust model, deployment sequence, and known Sybil/dispute limitations are documented in [`docs/AGENT_PASSPORT.md`](docs/AGENT_PASSPORT.md). It does not alter the live Credit Passport v2 contracts or loan proof.
+
 ## Deployed addresses
 
 Demo deployer: [`0x01e4A64145873c0574c6d77C0d7e07d313B3F2fa`](https://creditcoin-testnet.blockscout.com/address/0x01e4A64145873c0574c6d77C0d7e07d313B3F2fa)

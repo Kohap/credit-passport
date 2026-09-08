@@ -1073,6 +1073,7 @@ a.btn {
 .landing-close {
   position: relative;
   isolation: isolate;
+  overflow: hidden;
   margin: 2rem 0 0;
   padding: 4.5rem max(1rem, calc(50vw - 320px)) 3.5rem;
   border-top: none;
@@ -1138,6 +1139,7 @@ a.btn {
   align-items: flex-start;
   gap: 0.85rem;
   max-width: 32rem;
+  box-sizing: border-box;
 }
 
 .landing-close h2 {
@@ -1146,13 +1148,22 @@ a.btn {
   font-weight: 500;
   margin: 0;
   letter-spacing: -0.025em;
+  background: linear-gradient(105deg, #123d2e 8%, #dcebdd 56%, #f4f5eb 94%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 1px 16px rgba(13, 46, 34, 0.22);
 }
 
 .landing-close p {
   margin: 0;
-  color: var(--mute);
   max-width: 32rem;
   line-height: 1.55;
+  background: linear-gradient(105deg, #1e5a43 8%, #d8e8d8 70%, #f4f5eb 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 1px 14px rgba(13, 46, 34, 0.2);
 }
 
 .landing-footer {
@@ -1244,9 +1255,14 @@ a.btn {
     padding-bottom: 2.75rem;
   }
 
+  .landing-close-copy {
+    max-width: 100%;
+  }
+
   .landing-hero-visual,
   .landing-close-visual {
     animation: none;
+    transform: none;
   }
 
   .desk-top {

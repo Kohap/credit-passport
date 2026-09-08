@@ -44,7 +44,15 @@ The previous v1 proof is deliberately not presented as evidence for the new trus
 
 ## Agent Passport alpha
 
-The repository also contains an isolated, **not-yet-deployed** Agent Passport extension: client-funded Sepolia job escrow, a committed offchain work result, and Attestcoin-verified completion on Creditcoin. Its trust model, deployment sequence, and known Sybil/dispute limitations are documented in [`docs/AGENT_PASSPORT.md`](docs/AGENT_PASSPORT.md). It does not alter the live Credit Passport v2 contracts or loan proof.
+Agent Passport is a separate live testnet alpha: client-funded Sepolia job escrow, a committed offchain work result, and Attestcoin-verified completion on Creditcoin. It does not alter the live Credit Passport v2 contracts or its proven loan flow.
+
+| Contract | Network | Address |
+| --- | --- | --- |
+| AgentJobEscrow | Sepolia | [`0x294400Ddd3F6E11F04d0e16416cc677Dc134a2E1`](https://sepolia.etherscan.io/address/0x294400Ddd3F6E11F04d0e16416cc677Dc134a2E1) |
+| AgentPassportNFT | Creditcoin CC3 | [`0x7c052F21153352bf326Ed3fDecC678fEFB177284`](https://creditcoin-testnet.blockscout.com/address/0x7c052F21153352bf326Ed3fDecC678fEFB177284) |
+| AgentPassportASC | Creditcoin CC3 | [`0x965bdfEcD8ac53885d1d899E99814Af2752E16C8`](https://creditcoin-testnet.blockscout.com/address/0x965bdfEcD8ac53885d1d899E99814Af2752E16C8) |
+
+Its trust model, first-job verification procedure, and known Sybil/dispute limitations are documented in [`docs/AGENT_PASSPORT.md`](docs/AGENT_PASSPORT.md). Deployment is live; the first independently funded, Attestcoin-proven job credential is the next evidence milestone.
 
 ## Deployed addresses
 

@@ -1,0 +1,7 @@
+{
+  "chainId": 11155111,
+  "AgentJobEscrow": "0x294400Ddd3F6E11F04d0e16416cc677Dc134a2E1",
+  "asset": "0x3937cFf0385AF9aAA25212432f030Ddbb1B98798",
+  "deploymentTx": "0x1c338322da3bb7acf2d103ace4bfadaa9600246001f42c0f11e76839484217b9",
+  "deployer": "0x01e4A64145873c0574c6d77C0d7e07d313B3F2fa"
+}

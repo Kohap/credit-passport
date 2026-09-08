@@ -1,0 +1,9 @@
+{
+  "chainId": 102031,
+  "AgentPassportNFT": "0x7c052F21153352bf326Ed3fDecC678fEFB177284",
+  "AgentPassportASC": "0x965bdfEcD8ac53885d1d899E99814Af2752E16C8",
+  "trustedSepoliaAgentJobEscrow": "0x294400Ddd3F6E11F04d0e16416cc677Dc134a2E1",
+  "agentPassportNftDeploymentTx": "0x40930767f3f7e4713725fedb753dd90622d7536455f3522928d530590ec30155",
+  "agentPassportAscDeploymentTx": "0xd7e4597cde65140397ec9f2e357991749100f75aa2f69e25c43847c59836b800",
+  "deployer": "0x01e4A64145873c0574c6d77C0d7e07d313B3F2fa"
+}

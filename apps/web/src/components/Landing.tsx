@@ -329,10 +329,9 @@ export function Landing() {
       <section className="landing-close" aria-labelledby="close-title">
         <div className="landing-close-visual" aria-hidden="true" />
         <div className="landing-close-copy">
-          <h2 id="close-title">Run the Attestcoin loop</h2>
+          <h2 id="close-title">Turn repayment into opportunity</h2>
           <p>
-            One MetaMask account on Sepolia and Creditcoin CC3. About ninety seconds once
-            attestation is ready.
+            See how a verified repayment can become a portable credit record.
           </p>
           <Link href="/app" className="btn btn-primary landing-cta">
             Open Desk
@@ -348,9 +347,6 @@ export function Landing() {
             <a href="#developers">Developers</a>
             <a href="#legal">Legal</a>
             <Link href="/docs">Docs</Link>
-          </p>
-          <p className="landing-footer-meta">
-            Sepolia to Creditcoin CC3 · precompile 0x…0FD2 · chainKey 1
           </p>
         </div>
       </footer>

@@ -1,16 +1,13 @@
-MIT License
+Copyright (c) 2026 Kohap. All rights reserved.
 
-Copyright (c) 2026 Credit Passport contributors
+Credit Passport — including its source code, smart contracts, documentation,
+design, and associated materials — is the proprietary copyrighted work of Kohap.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+No open-source license is granted. Viewing the public repository or using the
+public testnet demo does not give you the right to copy, modify, merge, publish,
+distribute, sublicense, or sell the software, in whole or in part.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Written permission from the copyright holder is required for any of those uses.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,

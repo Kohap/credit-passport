@@ -348,7 +348,7 @@ export function Landing() {
 
       <footer className="landing-footer">
         <div className="landing-footer-grid">
-          <p>Credit Passport · Creditcoin CC3</p>
+          <p>Credit Passport · © 2026 Kohap · All rights reserved</p>
           <p className="landing-footer-links">
             <a href="#product">Product</a>
             <a href="#builders">Builders</a>

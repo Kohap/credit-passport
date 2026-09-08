@@ -239,4 +239,7 @@ ls apps/web/out/.nojekyll apps/web/out/index.html
 
 ## License
 
-MIT
+Copyright © 2026 Kohap. All rights reserved.
+
+Credit Passport is proprietary software. It is not MIT-licensed and is not free
+to copy, modify, or redistribute. See [`LICENSE`](LICENSE).

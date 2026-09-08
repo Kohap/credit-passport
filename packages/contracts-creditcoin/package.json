@@ -12,6 +12,6 @@
     "test": "bash ../../scripts/bootstrap-contract-deps.sh && forge test -vv"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "author": "Kohap",
+  "license": "UNLICENSED"
 }

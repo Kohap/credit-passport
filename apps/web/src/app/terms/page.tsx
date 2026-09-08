@@ -49,6 +49,15 @@ export default function TermsPage() {
         </p>
       </section>
 
+      <section className="section" aria-labelledby="copyright-terms-title">
+        <h2 id="copyright-terms-title">Copyright</h2>
+        <p>
+          Copyright © 2026 Kohap. All rights reserved. Credit Passport is proprietary
+          software. You may use this public testnet demo. You may not copy, modify,
+          distribute, sublicense, or sell the software without written permission.
+        </p>
+      </section>
+
       <p className="app-docs-link">
         Technical verification details are in the <Link href="/docs">documentation</Link> and the
         public <a href="https://github.com/Kohap/credit-passport" target="_blank" rel="noreferrer">source repository</a>.

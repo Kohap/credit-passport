@@ -177,7 +177,7 @@ export function Landing() {
             Builders
           </a>
           <a href="#legal" className="landing-nav-strong" onClick={closeMenu}>
-            Legal
+            Terms &amp; Conditions
           </a>
           <Link href="/app" className="landing-nav-strong landing-nav-desktop-desk" onClick={closeMenu}>
             Open Desk
@@ -352,7 +352,7 @@ export function Landing() {
           <p className="landing-footer-links">
             <a href="#product">Product</a>
             <a href="#builders">Builders</a>
-            <a href="#legal">Legal</a>
+            <a href="#legal">Terms &amp; Conditions</a>
             <Link href="/docs">Docs</Link>
           </p>
         </div>

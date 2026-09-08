@@ -109,7 +109,6 @@ export function AgentDesk() {
   const [status, setStatus] = useState("Connect a wallet to create a verified record of client-approved work.");
   const [busy, setBusy] = useState(false);
   const [proofBusy, setProofBusy] = useState(false);
-  const [proof, setProof] = useState<ProofPayload | null>(null);
   const [proofJson, setProofJson] = useState("");
   const [showProofFallback, setShowProofFallback] = useState(false);
 
@@ -363,7 +362,6 @@ export function AgentDesk() {
     setShowProofFallback(false);
     try {
       const built = await buildProof(completionTx, setStatus);
-      setProof(built);
       await submitProof(built);
     } catch (error) {
       if (error instanceof ProveCorsError) setShowProofFallback(true);
@@ -376,7 +374,6 @@ export function AgentDesk() {
   async function submitPastedProof() {
     if (!isHash(completionTx)) throw new Error("Paste the Sepolia JobCompleted transaction hash first.");
     const pasted = parsePastableProof(proofJson, completionTx);
-    setProof(pasted);
     await submitProof(pasted);
   }
 
@@ -474,7 +471,8 @@ export function AgentDesk() {
         <div className="section-head"><h2 id="verify-job-title">Verify a completed job</h2><span className="section-kicker">Assigned agent</span></div>
         <p>Paste the Sepolia transaction created when the client released payment. Use the same agent wallet that was assigned to the job.</p>
         <label className="field-label" htmlFor="completion-tx"><span>Sepolia JobCompleted transaction</span><input id="completion-tx" className="input agent-tx-input mono" value={completionTx} onChange={(event) => setCompletionTx(event.target.value.trim())} placeholder="0x…" autoComplete="off" /></label>
-        <div className="actions agent-actions"><button type="button" className="btn btn-primary" disabled={!isConnected || proofBusy || !isHash(completionTx)} onClick={() => void proveCompletion().catch((error: unknown) => setStatus(error instanceof Error ? error.message : String(error)))}>{proofBusy ? "Verifying completion…" : proof ? "Submit verified record" : "Verify completed job"}</button></div>
+        <div className="actions agent-actions"><button type="button" className="btn btn-primary" disabled={!isConnected || proofBusy || !isHash(completionTx)} onClick={() => void proveCompletion().catch((error: unknown) => setStatus(error instanceof Error ? error.message : String(error)))}>{proofBusy ? "Verifying completion…" : "Verify completed job"}</button></div>
+        {isHash(completionTx) ? <p className="tx-line mono">Completion transaction: <a href={`${SEPOLIA_EXPLORER}/tx/${completionTx}`} target="_blank" rel="noreferrer">{completionTx}</a></p> : null}
         {showProofFallback ? <div className="cors-panel"><h2>Proof fallback</h2><p>The browser cannot reach the proof service. Generate the proof locally, then paste the JSON here.</p><p className="mono">npm run prove -- {completionTx || "0xJOB_COMPLETED_TX"} --agent --json-out proof.json</p><textarea className="input" value={proofJson} onChange={(event) => setProofJson(event.target.value)} placeholder="Paste proof.json" aria-label="Agent completion proof JSON" /><div className="actions"><button type="button" className="btn btn-primary" disabled={!isConnected || proofBusy || !proofJson.trim()} onClick={() => void submitPastedProof().catch((error: unknown) => setStatus(error instanceof Error ? error.message : String(error)))}>Submit proof</button></div></div> : null}
       </section>
 

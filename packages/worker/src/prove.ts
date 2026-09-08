@@ -2,7 +2,7 @@
  * Credit Passport proof CLI
  *
  * Usage:
- *   npm run prove -- <sepoliaTxHash> [--submit] [--claim 0xBorrower] [--json-out path]
+ *   npm run prove -- <sepoliaTxHash> [--agent] [--submit] [--claim 0xAddress] [--json-out path]
  */
 
 import {
@@ -18,12 +18,14 @@ import { chainInfo, proofProvider } from "@gluwa/usc-sdk";
 import { loadEnv } from "./env.js";
 
 const ASC_DEFAULT = "0x5123CdFd395414FcB6c5b8bc10A0843882EfD277";
+const AGENT_ASC_DEFAULT = "0x965bdfEcD8ac53885d1d899E99814Af2752E16C8";
 const PROVER_FALLBACK = "https://proof-gen-api.cc3-testnet.creditcoin.network";
 const SEPOLIA_EXPLORER = "https://sepolia.etherscan.io";
 const CREDITCOIN_EXPLORER = "https://creditcoin-testnet.blockscout.com";
 
 const ASC_ABI = [
   "function proveRepayment(uint64 chainKey,uint64 blockHeight,bytes encodedTransaction,bytes32 merkleRoot,(bytes32 hash,bool isLeft)[] siblings,bytes32 lowerEndpointDigest,bytes32[] continuityRoots,address claimBorrower) returns (bool)",
+  "function proveJobCompletion(uint64 chainKey,uint64 blockHeight,bytes encodedTransaction,bytes32 merkleRoot,(bytes32 hash,bool isLeft)[] siblings,bytes32 lowerEndpointDigest,bytes32[] continuityRoots,address claimAgent) returns (bool)",
   "error WrongChainKey(uint64 got)",
   "error ProofFailed()",
   "error QueryAlreadyProcessed(bytes32 queryId)",
@@ -49,7 +51,7 @@ type ProofLike = {
 
 function usage(): never {
   console.error(
-    "Usage: npm run prove -- <sepoliaTxHash> [--submit] [--claim 0xAddress] [--json-out path]",
+    "Usage: npm run prove -- <sepoliaTxHash> [--agent] [--submit] [--claim 0xAddress] [--json-out path]",
   );
   process.exit(1);
 }
@@ -58,11 +60,13 @@ function parseArgs(argv: string[]) {
   const txHash = argv[0];
   if (!txHash || !isHexString(txHash, 32)) usage();
   let submit = false;
+  let agent = false;
   let claim = "0x0000000000000000000000000000000000000000";
   let jsonOut: string | undefined;
   for (let i = 1; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--submit") submit = true;
+    else if (a === "--agent") agent = true;
     else if (a === "--claim") {
       claim = argv[++i] ?? usage();
       getAddress(claim);
@@ -72,7 +76,7 @@ function parseArgs(argv: string[]) {
       usage();
     }
   }
-  return { txHash, submit, claim, jsonOut };
+  return { txHash, submit, agent, claim, jsonOut };
 }
 
 function decodeRevert(err: unknown): string {
@@ -135,13 +139,17 @@ async function fetchProof(
 }
 
 async function main(): Promise<void> {
-  const { txHash, submit, claim, jsonOut } = parseArgs(process.argv.slice(2));
+  const { txHash, submit, agent, claim, jsonOut } = parseArgs(process.argv.slice(2));
   const env = loadEnv();
 
   const sourceProvider = new JsonRpcProvider(env.SEPOLIA_RPC_URL);
   const creditcoinProvider = new JsonRpcProvider(env.CREDITCOIN_RPC_URL);
   const chainKey = env.SEPOLIA_CHAIN_KEY;
-  const asc = env.CREDITCOIN_PASSPORT_ASC ?? ASC_DEFAULT;
+  const asc = agent
+    ? env.CREDITCOIN_AGENT_PASSPORT_ASC ?? AGENT_ASC_DEFAULT
+    : env.CREDITCOIN_PASSPORT_ASC ?? ASC_DEFAULT;
+  const proveFunction = agent ? "proveJobCompletion" : "proveRepayment";
+  const claimField = agent ? "claimAgent" : "claimBorrower";
 
   const info = new chainInfo.PrecompileChainInfoProvider(
     creditcoinProvider as unknown as ConstructorParameters<
@@ -207,7 +215,7 @@ async function main(): Promise<void> {
     const entry = s as MerkleSibling & { hash?: string; isLeft?: boolean };
     return [entry.hash, Boolean(entry.isLeft)] as [string, boolean];
   });
-  const calldata = iface.encodeFunctionData("proveRepayment", [
+  const calldata = iface.encodeFunctionData(proveFunction, [
     chainKeyOut,
     headerNumber,
     proof.txBytes,
@@ -234,9 +242,9 @@ async function main(): Promise<void> {
     continuityRoots: proof.continuityProof.roots,
     txBytes: proof.txBytes,
     cached: Boolean(proof.cached),
-    claimBorrower: claim,
+    [claimField]: claim,
     asc,
-    proveRepaymentCalldata: calldata,
+    [`${proveFunction}Calldata`]: calldata,
   };
 
   console.log(JSON.stringify(proofDocument, null, 2));
@@ -251,35 +259,35 @@ async function main(): Promise<void> {
     const pk = env.CREDITCOIN_PRIVATE_KEY;
     if (!pk) throw new Error("CREDITCOIN_PRIVATE_KEY required for --submit");
     const wallet = new Wallet(pk, creditcoinProvider);
-    console.log(`Submitting proveRepayment from ${wallet.address} → ${asc}`);
+    console.log(`Submitting ${proveFunction} from ${wallet.address} → ${asc}`);
     try {
       const tx = await wallet.sendTransaction({ to: asc, data: calldata });
       console.log(`Creditcoin tx: ${tx.hash}`);
       const conf = await tx.wait();
       console.log(`Confirmed in block ${conf?.blockNumber}`);
       console.log(`
-======== HACKATHON PROOF ========
-Sepolia LoanRepaid tx:  ${SEPOLIA_EXPLORER}/tx/${txHash}
-Creditcoin proveRepayment tx: ${CREDITCOIN_EXPLORER}/tx/${tx.hash}
+======== ${agent ? "AGENT PASSPORT" : "HACKATHON"} PROOF ========
+Sepolia ${agent ? "JobCompleted" : "LoanRepaid"} tx:  ${SEPOLIA_EXPLORER}/tx/${txHash}
+Creditcoin ${proveFunction} tx: ${CREDITCOIN_EXPLORER}/tx/${tx.hash}
 ASC: ${asc}
-claimBorrower: ${claim}
+${claimField}: ${claim}
 chainKey: ${proofDocument.chainKey}
 headerNumber: ${proofDocument.headerNumber}
 =================================
 `);
     } catch (err) {
       const decoded = decodeRevert(err);
-      console.error(`proveRepayment reverted: ${decoded}`);
+      console.error(`${proveFunction} reverted: ${decoded}`);
       throw err;
     }
   } else {
     console.log(
-      "Calldata ready. Pass to the web UI (paste JSON) or re-run with --submit once CREDITCOIN_PRIVATE_KEY is set.",
+      "Calldata ready. Re-run with --submit once CREDITCOIN_PRIVATE_KEY is set.",
     );
     console.log(`
-======== HACKATHON PROOF (proof only — not submitted) ========
-Sepolia LoanRepaid tx:  ${SEPOLIA_EXPLORER}/tx/${txHash}
-Creditcoin proveRepayment tx: TBD (run with --submit)
+======== ${agent ? "AGENT PASSPORT" : "HACKATHON"} PROOF (proof only — not submitted) ========
+Sepolia ${agent ? "JobCompleted" : "LoanRepaid"} tx:  ${SEPOLIA_EXPLORER}/tx/${txHash}
+Creditcoin ${proveFunction} tx: TBD (run with --submit)
 ASC: ${asc}
 ==============================================================
 `);

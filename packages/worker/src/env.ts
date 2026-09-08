@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 const ASC_DEFAULT = "0x5123CdFd395414FcB6c5b8bc10A0843882EfD277";
+const AGENT_ASC_DEFAULT = "0x965bdfEcD8ac53885d1d899E99814Af2752E16C8";
 
 /** Empty / whitespace env values → undefined so Zod defaults apply. */
 function emptyToUndef(v: unknown): unknown {
@@ -39,6 +40,10 @@ const envSchema = z.object({
   CREDITCOIN_PASSPORT_ASC: z.preprocess(
     emptyToUndef,
     address40.default(ASC_DEFAULT),
+  ),
+  CREDITCOIN_AGENT_PASSPORT_ASC: z.preprocess(
+    emptyToUndef,
+    address40.default(AGENT_ASC_DEFAULT),
   ),
   CREDITCOIN_PRIVATE_KEY: z.preprocess(emptyToUndef, privateKey.optional()),
 });

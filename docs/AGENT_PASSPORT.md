@@ -14,6 +14,17 @@ The live Credit Passport v2 deployment and its loan proof are unchanged. Agent P
 
 The deployed ASC is the NFT minter and trusts only the deployed Sepolia escrow. The escrow is configured with the existing v2 Sepolia MockUSD at `0x3937cFf0385AF9aAA25212432f030Ddbb1B98798`.
 
+## First verified completion
+
+The first live run used a distinct ephemeral client wallet to fund and approve a `1 mUSD` job for agent `0x01e4A64145873c0574c6d77C0d7e07d313B3F2fa`. The client key was not retained. The agent then claimed the Attestcoin proof from the same agent wallet.
+
+| Artifact | Value |
+| --- | --- |
+| Sepolia `JobCompleted` | [`0x81744af17cdf623d839e2b6514d77f5fa00bb2e2101569f82128033cc3e64131`](https://sepolia.etherscan.io/tx/0x81744af17cdf623d839e2b6514d77f5fa00bb2e2101569f82128033cc3e64131) |
+| Creditcoin `proveJobCompletion` | [`0x9a0472dce66776f08df3c80a57d52fae22f000328d861412b841628f68dbc8bc`](https://creditcoin-testnet.blockscout.com/tx/0x9a0472dce66776f08df3c80a57d52fae22f000328d861412b841628f68dbc8bc) |
+| Header height / chain key | `11660182` / `1` |
+| Agent Passport | token `1`, one completed job, `1 mUSD` settled volume |
+
 ## What counts as completion
 
 1. A client funds `AgentJobEscrow.createJob(agent, amount, briefHash)` with mUSD.
@@ -40,3 +51,9 @@ The deployed ASC is the NFT minter and trusts only the deployed Sepolia escrow. 
 5. Run a real funded job, wait for its height to attest, generate a proof, and submit from the agent wallet.
 
 The proof builder remains generic: it proves a Sepolia transaction. Only the destination function and expected event change from `proveRepayment` / `LoanRepaid` to `proveJobCompletion` / `JobCompleted`.
+
+For a live Agent Passport proof, run:
+
+```bash
+npm run prove -- <JobCompleted Sepolia tx hash> --agent --submit --claim <agent wallet>
+```

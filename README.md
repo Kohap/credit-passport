@@ -52,7 +52,13 @@ Agent Passport is a separate live testnet alpha: client-funded Sepolia job escro
 | AgentPassportNFT | Creditcoin CC3 | [`0x7c052F21153352bf326Ed3fDecC678fEFB177284`](https://creditcoin-testnet.blockscout.com/address/0x7c052F21153352bf326Ed3fDecC678fEFB177284) |
 | AgentPassportASC | Creditcoin CC3 | [`0x965bdfEcD8ac53885d1d899E99814Af2752E16C8`](https://creditcoin-testnet.blockscout.com/address/0x965bdfEcD8ac53885d1d899E99814Af2752E16C8) |
 
-Its trust model, first-job verification procedure, and known Sybil/dispute limitations are documented in [`docs/AGENT_PASSPORT.md`](docs/AGENT_PASSPORT.md). Deployment is live; the first independently funded, Attestcoin-proven job credential is the next evidence milestone.
+| First verified agent completion | Evidence |
+| --- | --- |
+| Sepolia `JobCompleted` tx | [`0x81744af17cdf623d839e2b6514d77f5fa00bb2e2101569f82128033cc3e64131`](https://sepolia.etherscan.io/tx/0x81744af17cdf623d839e2b6514d77f5fa00bb2e2101569f82128033cc3e64131) |
+| Creditcoin `proveJobCompletion` tx | [`0x9a0472dce66776f08df3c80a57d52fae22f000328d861412b841628f68dbc8bc`](https://creditcoin-testnet.blockscout.com/tx/0x9a0472dce66776f08df3c80a57d52fae22f000328d861412b841628f68dbc8bc) |
+| Agent Passport | **#1** for `0x01e4A64145873c0574c6d77C0d7e07d313B3F2fa`; 1 completed job, 1 mUSD settled |
+
+Its trust model, verification procedure, and known Sybil/dispute limitations are documented in [`docs/AGENT_PASSPORT.md`](docs/AGENT_PASSPORT.md).
 
 ## Deployed addresses
 

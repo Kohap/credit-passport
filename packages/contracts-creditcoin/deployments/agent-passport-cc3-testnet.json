@@ -5,5 +5,7 @@
   "trustedSepoliaAgentJobEscrow": "0x294400Ddd3F6E11F04d0e16416cc677Dc134a2E1",
   "agentPassportNftDeploymentTx": "0x40930767f3f7e4713725fedb753dd90622d7536455f3522928d530590ec30155",
   "agentPassportAscDeploymentTx": "0xd7e4597cde65140397ec9f2e357991749100f75aa2f69e25c43847c59836b800",
+  "firstProveJobCompletionTx": "0x9a0472dce66776f08df3c80a57d52fae22f000328d861412b841628f68dbc8bc",
+  "firstAgentPassportTokenId": 1,
   "deployer": "0x01e4A64145873c0574c6d77C0d7e07d313B3F2fa"
 }

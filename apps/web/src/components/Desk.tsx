@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { ConnectButton } from "@/components/ConnectButton";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -896,6 +897,13 @@ export function Desk() {
     phase === "waiting_attestation" ||
     phase === "submitting";
 
+  const passportTokenId =
+    tokenId !== undefined && tokenId !== 0n
+      ? tokenId.toString()
+      : verified?.tokenId && verified.tokenId !== "refresh" && verified.tokenId !== "0"
+        ? verified.tokenId
+        : null;
+
   return (
     <main className="desk">
       <header className="desk-top">
@@ -1188,6 +1196,37 @@ export function Desk() {
               {borrowTx}
             </a>
           </p>
+        ) : null}
+
+        {passportTokenId ? (
+          <article className="passport-credential" aria-labelledby="passport-credential-title">
+            <div className="passport-art">
+              <Image
+                src="/credit-passport-credential.png"
+                alt=""
+                width={900}
+                height={1125}
+                sizes="(max-width: 800px) 100vw, 15rem"
+              />
+            </div>
+            <div className="passport-credential-copy">
+              <p className="passport-eyebrow">Verified credential</p>
+              <h3 id="passport-credential-title">Credit Passport</h3>
+              <p>
+                A repayment attested from Sepolia has issued this non-transferable credit credential on Creditcoin.
+              </p>
+              <dl className="passport-details">
+                <dt>Passport</dt>
+                <dd>#{passportTokenId}</dd>
+                <dt>Holder</dt>
+                <dd>{address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Connected wallet"}</dd>
+                <dt>Score</dt>
+                <dd>{score !== undefined ? score.toString() : verified?.score ?? "-"}</dd>
+                <dt>Borrow cap</dt>
+                <dd>{cap !== undefined ? `${formatEther(cap)} mUSD` : verified?.cap ?? "-"}</dd>
+              </dl>
+            </div>
+          </article>
         ) : null}
 
         <dl className="kv" style={{ marginTop: "1.5rem" }}>

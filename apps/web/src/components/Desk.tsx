@@ -44,6 +44,7 @@ type ProvePhase =
   | "waiting_source"
   | "waiting_attestation"
   | "generating_proof"
+  | "proof_ready"
   | "submitting"
   | "verified"
   | "error";
@@ -290,6 +291,17 @@ export function Desk() {
       | undefined;
     return provider?.request?.bind(provider);
   }
+
+  const updateProofProgress = useCallback((message: string) => {
+    if (/confirming sepolia/i.test(message)) {
+      setPhase("waiting_source");
+    } else if (/waiting for attestation|attestation:/i.test(message)) {
+      setPhase("waiting_attestation");
+    } else if (/proof|prover|retry|indexing/i.test(message)) {
+      setPhase("generating_proof");
+    }
+    setStatus(message);
+  }, []);
 
   async function faucet() {
     if (!address) {
@@ -539,10 +551,11 @@ export function Desk() {
         }
         lastHash = hash;
       }
+      setProof(null);
       setRepayTx(lastHash);
       setLoanRefresh((current) => current + 1);
       setStatus(
-        `${currentLoans.length === 1 ? "Repayment" : "All repayments"} confirmed. The last repayment is ready to prove on Creditcoin.`,
+        `${currentLoans.length === 1 ? "Repayment" : "All repayments"} confirmed. Preparing the proof for Creditcoin…`,
       );
     } catch (err: unknown) {
       setStatus(err instanceof Error ? err.message : String(err));
@@ -584,6 +597,46 @@ export function Desk() {
     setCorsFallback(false);
   }
 
+  useEffect(() => {
+    if (
+      !repayTx ||
+      proof?.sepoliaTxHash.toLowerCase() === repayTx.toLowerCase()
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    setCorsFallback(false);
+    setPhase("waiting_source");
+    setStatus("Preparing repayment proof…");
+
+    void buildProof(repayTx, (message) => {
+      if (!cancelled) updateProofProgress(message);
+    })
+      .then((payload) => {
+        if (cancelled) return;
+        setProof(payload);
+        setPhase("proof_ready");
+        setStatus("Proof ready. Confirm the Creditcoin transaction to finish verification.");
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setPhase("error");
+        if (err instanceof ProveCorsError) {
+          setCorsFallback(true);
+          setStatus(
+            "Browser cannot reach the proof service. Use the CLI fallback panel below, then paste the proof JSON.",
+          );
+          return;
+        }
+        setStatus(err instanceof Error ? err.message : String(err));
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [proof?.sepoliaTxHash, repayTx, updateProofProgress]);
+
   async function proveOnCreditcoin() {
     if (!repayTx) {
       setStatus("Repay on Sepolia first so we have a LoanRepaid tx hash.");
@@ -592,6 +645,10 @@ export function Desk() {
     }
     try {
       setCorsFallback(false);
+      if (proof && proof.sepoliaTxHash.toLowerCase() === repayTx.toLowerCase()) {
+        await submitProveRepayment(proof);
+        return;
+      }
       setPhase("waiting_source");
       setStatus("Confirming Sepolia repayment…");
       setPhase("waiting_attestation");
@@ -600,14 +657,7 @@ export function Desk() {
       );
       setPhase("generating_proof");
 
-      const payload = await buildProof(repayTx, (msg) => {
-        if (/waiting for attestation|attestation:/i.test(msg)) {
-          setPhase("waiting_attestation");
-        } else if (/proof|prover|retry|indexing/i.test(msg)) {
-          setPhase("generating_proof");
-        }
-        setStatus(msg);
-      });
+      const payload = await buildProof(repayTx, updateProofProgress);
       setProof(payload);
       await submitProveRepayment(payload);
     } catch (err: unknown) {
@@ -676,7 +726,7 @@ export function Desk() {
   }
 
   const phaseClass = useMemo(() => {
-    if (phase === "verified") return "status ok";
+    if (phase === "verified" || phase === "proof_ready") return "status ok";
     if (phase === "error") return "status bad";
     return "status";
   }, [phase]);
@@ -700,6 +750,7 @@ export function Desk() {
       : "idle";
 
   const proveBusy =
+    phase === "waiting_source" ||
     phase === "generating_proof" ||
     phase === "waiting_attestation" ||
     phase === "submitting";
@@ -887,7 +938,11 @@ export function Desk() {
             disabled={!isConnected || !creditReady || !repayTx || proveBusy}
             onClick={() => void proveOnCreditcoin()}
           >
-            {proveBusy ? "Proving…" : "Prove repayment"}
+            {proveBusy
+              ? "Preparing proof…"
+              : phase === "proof_ready"
+                ? "Submit proof to Creditcoin"
+                : "Prove repayment"}
           </button>
         </div>
         <p className={phaseClass} role="status" aria-live="polite">

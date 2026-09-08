@@ -1,8 +1,6 @@
 import { JsonRpcProvider, isHexString } from "ethers";
-import { chainInfo } from "@gluwa/usc-sdk";
 import type { Hex } from "viem";
 import {
-  CREDITCOIN_RPC,
   PROOF_BUILDER_URL,
   PROOF_BUILDER_URL_FALLBACK,
   SEPOLIA_CHAIN_KEY,
@@ -60,7 +58,7 @@ type ProverFailure = {
   retriable: boolean;
 };
 
-const PROVER_POLL_MS = 15_000;
+const PROVER_POLL_MS = 5_000;
 const PROVER_TIMEOUT_MS = 1_200_000;
 
 function sleep(ms: number) {
@@ -205,8 +203,6 @@ export async function buildProof(
   const sepoliaRpc =
     process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL ??
     "https://ethereum-sepolia-rpc.publicnode.com";
-  const creditcoinRpc =
-    process.env.NEXT_PUBLIC_CREDITCOIN_RPC_URL ?? CREDITCOIN_RPC;
   const primary =
     process.env.NEXT_PUBLIC_PROOF_BUILDER_URL ?? PROOF_BUILDER_URL;
   const fallback =
@@ -218,21 +214,11 @@ export async function buildProof(
 
   try {
     const source = new JsonRpcProvider(sepoliaRpc);
-    const creditcoin = new JsonRpcProvider(creditcoinRpc);
-    const info = new chainInfo.PrecompileChainInfoProvider(
-      creditcoin as unknown as ConstructorParameters<
-        typeof chainInfo.PrecompileChainInfoProvider
-      >[0],
-    );
-
-    onStatus?.("Checking Attestcoin supported chains…");
-    const supported = await info.getSupportedChains();
-    if (!supported.some((c) => c.chainKey === chainKey)) {
-      throw new Error(`Sepolia chainKey ${chainKey} not in getSupportedChains()`);
-    }
 
     onStatus?.("Confirming Sepolia transaction…");
-    const receipt = await source.waitForTransaction(txHash, 1, 180_000);
+    const receipt =
+      (await source.getTransactionReceipt(txHash)) ??
+      (await source.waitForTransaction(txHash, 1, 180_000));
     if (!receipt?.blockNumber) {
       throw new Error("Sepolia tx not mined");
     }

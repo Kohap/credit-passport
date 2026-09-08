@@ -234,6 +234,7 @@ export function Desk() {
     score: string;
     cap: string;
     tokenId: string;
+    passportScore: string;
   } | null>(null);
 
   const sepoliaReady = isConfigured(addresses.sepoliaMockMarket);
@@ -287,6 +288,15 @@ export function Desk() {
     args: address ? [address] : undefined,
     chainId: CREDITCOIN_CHAIN_ID,
     query: { enabled: Boolean(address) && creditReady },
+  });
+
+  const { data: passportScore, refetch: refetchPassportScore } = useReadContract({
+    address: addresses.passportNft as Address,
+    abi: passportNftAbi,
+    functionName: "scoreOfToken",
+    args: tokenId && tokenId !== 0n ? [tokenId] : undefined,
+    chainId: CREDITCOIN_CHAIN_ID,
+    query: { enabled: Boolean(tokenId && tokenId !== 0n) && creditReady },
   });
 
   const { data: lineBalance } = useReadContract({
@@ -678,14 +688,56 @@ export function Desk() {
       request: await selectedWalletRequest(),
     });
     setCreditTx(hash);
-    await Promise.all([refetchScore(), refetchCap(), refetchToken()]);
+    setStatus("Waiting for Creditcoin confirmation and current Passport credentials…");
+    const receipt = await creditcoinClient.waitForTransactionReceipt({
+      hash,
+      timeout: 120_000,
+    });
+    if (receipt.status === "reverted") {
+      throw new Error("proveRepayment reverted on Creditcoin.");
+    }
+    const [latestScore, latestCap, latestTokenId] = await Promise.all([
+      creditcoinClient.readContract({
+        address: addresses.creditScore as Address,
+        abi: creditScoreAbi,
+        functionName: "scoreOf",
+        args: [address],
+        blockNumber: receipt.blockNumber,
+      }),
+      creditcoinClient.readContract({
+        address: addresses.creditLine as Address,
+        abi: creditLineAbi,
+        functionName: "borrowCapOf",
+        args: [address],
+        blockNumber: receipt.blockNumber,
+      }),
+      creditcoinClient.readContract({
+        address: addresses.passportNft as Address,
+        abi: passportNftAbi,
+        functionName: "tokenOf",
+        args: [address],
+        blockNumber: receipt.blockNumber,
+      }),
+    ]);
+    const latestPassportScore =
+      latestTokenId === 0n
+        ? 0n
+        : await creditcoinClient.readContract({
+            address: addresses.passportNft as Address,
+            abi: passportNftAbi,
+            functionName: "scoreOfToken",
+            args: [latestTokenId],
+            blockNumber: receipt.blockNumber,
+          });
+    await Promise.all([refetchScore(), refetchCap(), refetchToken(), refetchPassportScore()]);
     setPhase("verified");
     setVerified({
-      score: score !== undefined ? score.toString() : "refresh page / wait",
-      cap: cap !== undefined ? formatEther(cap) : "refresh",
-      tokenId: tokenId !== undefined ? tokenId.toString() : "refresh",
+      score: latestScore.toString(),
+      cap: formatEther(latestCap),
+      tokenId: latestTokenId.toString(),
+      passportScore: latestPassportScore.toString(),
     });
-    setStatus(`Verified on Creditcoin. Tx ${hash}`);
+    setStatus(`Verified on Creditcoin. Latest Passport credentials loaded. Tx ${hash}`);
     setCorsFallback(false);
   }
 
@@ -1200,7 +1252,7 @@ export function Desk() {
                 <dt>Holder</dt>
                 <dd>{address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Connected wallet"}</dd>
                 <dt>Score</dt>
-                <dd>{score !== undefined ? score.toString() : verified?.score ?? "-"}</dd>
+                <dd>{passportScore !== undefined ? passportScore.toString() : verified?.passportScore ?? "-"}</dd>
                 <dt>Borrow cap</dt>
                 <dd>{cap !== undefined ? `${formatEther(cap)} mUSD` : verified?.cap ?? "-"}</dd>
               </dl>

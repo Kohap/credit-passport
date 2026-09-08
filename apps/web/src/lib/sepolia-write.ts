@@ -172,19 +172,40 @@ export async function sendPopulatedWrite(args: {
   }
   const gasLimit = gas + gas / 5n;
 
+  let transactionFees:
+    | { maxFeePerGas: Hex; maxPriorityFeePerGas: Hex }
+    | { gasPrice: Hex };
+  let nonce: number;
   try {
-    const [balance, gasPrice] = await Promise.all([
+    const [balance, transactionCount, fees, gasPrice] = await Promise.all([
       args.publicClient.getBalance({ address: args.account }),
+      args.publicClient.getTransactionCount({
+        address: args.account,
+        blockTag: "pending",
+      }),
+      args.publicClient.estimateFeesPerGas(),
       args.publicClient.getGasPrice(),
     ]);
-    if (balance < gasLimit * gasPrice) {
+    const maximumGasPrice = fees.maxFeePerGas ?? gasPrice;
+    if (balance < gasLimit * maximumGasPrice) {
       throw new Error(
-        `Not enough ${args.chain.nativeCurrency.symbol} for network gas. Need about ${formatEther(gasLimit * gasPrice)} ${args.chain.nativeCurrency.symbol}.`,
+        `Not enough ${args.chain.nativeCurrency.symbol} for network gas. Need about ${formatEther(gasLimit * maximumGasPrice)} ${args.chain.nativeCurrency.symbol}.`,
       );
     }
+    nonce = transactionCount;
+    transactionFees =
+      fees.maxFeePerGas !== undefined && fees.maxPriorityFeePerGas !== undefined
+        ? {
+            maxFeePerGas: toHex(fees.maxFeePerGas),
+            maxPriorityFeePerGas: toHex(fees.maxPriorityFeePerGas),
+          }
+        : { gasPrice: toHex(gasPrice) };
   } catch (error) {
     const message = errorText(error);
     if (/Not enough .* for network gas/i.test(message)) throw error;
+    throw new Error(
+      `Could not prepare the transaction with ${args.chain.name}'s public RPC. Retry in a moment.`,
+    );
   }
 
   let hash: unknown;
@@ -198,6 +219,9 @@ export async function sendPopulatedWrite(args: {
             to: args.address,
             data,
             gas: toHex(gasLimit),
+            nonce: toHex(nonce),
+            chainId: toHex(args.chain.id),
+            ...transactionFees,
           },
         ],
       }),

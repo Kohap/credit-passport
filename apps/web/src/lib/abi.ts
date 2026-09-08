@@ -7,16 +7,6 @@ export const mockUsdAbi = [
     outputs: [],
   },
   {
-    type: "function",
-    name: "mint",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "to", type: "address" },
-      { name: "amount", type: "uint256" },
-    ],
-    outputs: [],
-  },
-  {
     type: "error",
     name: "FaucetCooldown",
     inputs: [{ name: "nextMintAt", type: "uint256" }],
@@ -86,13 +76,6 @@ export const mockMarketAbi = [
       { name: "debt", type: "uint256" },
       { name: "active", type: "bool" },
     ],
-  },
-  {
-    type: "function",
-    name: "nextLoanId",
-    stateMutability: "view",
-    inputs: [],
-    outputs: [{ type: "uint256" }],
   },
   {
     type: "event",

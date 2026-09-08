@@ -4,6 +4,8 @@
 
 Credit Passport proves a borrower repaid on **Ethereum Sepolia** (today: a **MockMarket** fixture), then raises a borrow cap and mints a soulbound **Credit Passport** NFT on **Creditcoin CC3 Testnet** — optionally drawing from a funded CreditLine. Underwriting only advances after **Attestcoin** cryptographically verifies the source-chain tx and its `LoanRepaid` event. The loan source is mock; the Attestcoin path is real.
 
+> The deployed v1 testnet contracts are a prototype. The hardened v2 source limits each wallet to one demo loan, only credits a fully closed loan once, and restricts market-inventory minting to the deployer. Redeploy both chains before presenting v2 as live.
+
 ## Why Attestcoin is required
 
 Repayment lives on Sepolia; credit decisions live on Creditcoin. Attestcoin is the only on-chain source of truth that the Sepolia tx existed, succeeded (`receiptStatus == 1`), and emitted our event before score / cap / NFT update.
@@ -91,11 +93,12 @@ bash scripts/fill-hackathon-proof.sh <sepoliaTx> <creditcoinTx> [tokenId]
 
 **Pitfall:** `chainKey` ≠ EVM `chainId`. Sepolia’s chainKey on CC3 testnet is `1`.
 
-## Scoring (v1)
+## Scoring (hardened v2)
 
-- +40 first verified repayment
-- +20 each additional verified repayment
-- +10 if `remainingDebt == 0` (loan closed)
+- Only a verified **fully closed** demo loan can change score
+- A borrower/loan pair can be credited once
+- +50 first verified closed repayment
+- +30 each additional verified closed repayment
 - Total score capped at **100**
 - `borrowCap = 100 mUSD + (score × 2 mUSD)`
 
@@ -131,17 +134,8 @@ cp .env.example .env
 
 npm install
 
-# Foundry deps (once per machine)
-cd packages/contracts-sepolia
-forge install foundry-rs/forge-std@v1.9.4 OpenZeppelin/openzeppelin-contracts@v5.0.2
-cd ../contracts-creditcoin
-forge install foundry-rs/forge-std@v1.9.4 OpenZeppelin/openzeppelin-contracts@v5.0.2
-npm install @gluwa/asc-contracts@0.2.1
-cd ../..
-
-# Unit tests (no live precompile required)
-cd packages/contracts-sepolia && forge test
-cd ../contracts-creditcoin && forge test
+# Install Foundry dependencies and run unit tests (no live precompile required)
+npm run test:contracts
 ```
 
 ## Deploy (testnets)

@@ -10,9 +10,13 @@
   "scripts": {
     "build:contracts:sepolia": "cd packages/contracts-sepolia && forge build",
     "build:contracts:creditcoin": "cd packages/contracts-creditcoin && forge build",
-    "test:contracts:sepolia": "cd packages/contracts-sepolia && forge test -vv",
-    "test:contracts:creditcoin": "cd packages/contracts-creditcoin && forge test -vv",
+    "setup:contracts": "bash scripts/bootstrap-contract-deps.sh",
+    "test:contracts:sepolia": "npm run setup:contracts && cd packages/contracts-sepolia && forge test -vv",
+    "test:contracts:creditcoin": "npm run setup:contracts && cd packages/contracts-creditcoin && forge test -vv",
     "test:contracts": "npm run test:contracts:sepolia && npm run test:contracts:creditcoin",
+    "security:secrets": "bash scripts/check-secrets.sh",
+    "security:dependencies": "npm audit --omit=dev --audit-level=high",
+    "security:check": "npm run security:secrets && npm run security:dependencies",
     "prove": "npm run prove --workspace=packages/worker --",
     "deploy:testnets": "bash scripts/deploy-all.sh",
     "dev:web": "npm run dev --workspace=apps/web",
@@ -24,7 +28,10 @@
   },
   "overrides": {
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "axios": "1.20.0",
+    "postcss": "8.5.23",
+    "ws": "8.21.3"
   },
   "license": "MIT"
 }

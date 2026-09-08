@@ -13,21 +13,34 @@ const address40 = z
   .string()
   .regex(/^0x[0-9a-fA-F]{40}$/, "Invalid address");
 
+const httpsUrl = z.string().url().refine(
+  (value) => {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password;
+  },
+  "Must be an HTTPS URL without credentials",
+);
+
+const privateKey = z
+  .string()
+  .regex(/^0x[0-9a-fA-F]{64}$/, "Invalid private key");
+
 const envSchema = z.object({
-  SEPOLIA_RPC_URL: z.string().url(),
+  SEPOLIA_RPC_URL: httpsUrl,
   CREDITCOIN_RPC_URL: z.preprocess(
     emptyToUndef,
-    z.string().url().default("https://rpc.cc3-testnet.creditcoin.network"),
+    httpsUrl.default("https://rpc.cc3-testnet.creditcoin.network"),
   ),
   PROOF_BUILDER_URL: z.preprocess(
     emptyToUndef,
-    z.string().url().default("https://prover.cc3-testnet.creditcoin.network"),
+    httpsUrl.default("https://prover.cc3-testnet.creditcoin.network"),
   ),
-  SEPOLIA_CHAIN_KEY: z.coerce.number().int().default(1),
+  SEPOLIA_CHAIN_KEY: z.coerce.number().int().positive().max(Number.MAX_SAFE_INTEGER).default(1),
   CREDITCOIN_PASSPORT_ASC: z.preprocess(
     emptyToUndef,
     address40.default(ASC_DEFAULT),
   ),
+  CREDITCOIN_PRIVATE_KEY: z.preprocess(emptyToUndef, privateKey.optional()),
 });
 
 export type Env = z.infer<typeof envSchema>;

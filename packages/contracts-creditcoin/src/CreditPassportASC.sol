@@ -32,6 +32,7 @@ contract CreditPassportASC {
     PassportNFT public immutable passportNFT;
 
     mapping(bytes32 => bool) public processedQueries;
+    mapping(address => mapping(uint256 => bool)) public creditedLoans;
 
     error WrongChainKey(uint64 got);
     error ProofFailed();
@@ -41,18 +42,15 @@ contract CreditPassportASC {
     error BadEmitter(address got);
     error BorrowerMismatch(address logBorrower, address claimer);
     error BadTopics();
+    error LoanNotClosed(uint256 remainingDebt);
+    error LoanAlreadyCredited(address borrower, uint256 loanId);
 
     event RepaymentVerified(
         address indexed borrower, uint256 indexed loanId, uint256 amount, bytes32 txKey, uint256 newScore
     );
     event PassportUpdated(address indexed borrower, uint256 tokenId, uint256 score, uint256 cap);
 
-    constructor(
-        address sepoliaMockMarket_,
-        address creditScore_,
-        address creditLine_,
-        address passportNFT_
-    ) {
+    constructor(address sepoliaMockMarket_, address creditScore_, address creditLine_, address passportNFT_) {
         require(sepoliaMockMarket_ != address(0), "market");
         require(creditScore_ != address(0), "score");
         require(creditLine_ != address(0), "line");
@@ -83,12 +81,10 @@ contract CreditPassportASC {
 
         INativeQueryVerifier.MerkleProof memory merkleProof =
             INativeQueryVerifier.MerkleProof({root: merkleRoot, siblings: siblings});
-        INativeQueryVerifier.ContinuityProof memory continuityProof = INativeQueryVerifier.ContinuityProof({
-            lowerEndpointDigest: lowerEndpointDigest, roots: continuityRoots
-        });
+        INativeQueryVerifier.ContinuityProof memory continuityProof =
+            INativeQueryVerifier.ContinuityProof({lowerEndpointDigest: lowerEndpointDigest, roots: continuityRoots});
 
-        bool verified =
-            VERIFIER.verifyAndEmit(chainKey, blockHeight, encodedTransaction, merkleProof, continuityProof);
+        bool verified = VERIFIER.verifyAndEmit(chainKey, blockHeight, encodedTransaction, merkleProof, continuityProof);
         if (!verified) revert ProofFailed();
 
         processedQueries[queryId] = true;
@@ -108,8 +104,7 @@ contract CreditPassportASC {
         EvmV1Decoder.ReceiptFields memory receipt = EvmV1Decoder.decodeReceiptFields(encodedTransaction);
         if (receipt.receiptStatus != 1) revert TxFailed();
 
-        EvmV1Decoder.LogEntry[] memory logs =
-            EvmV1Decoder.getLogsByEventSignature(receipt, LOAN_REPAID_SIGNATURE);
+        EvmV1Decoder.LogEntry[] memory logs = EvmV1Decoder.getLogsByEventSignature(receipt, LOAN_REPAID_SIGNATURE);
         if (logs.length == 0) revert NoLoanRepaidLog();
 
         EvmV1Decoder.LogEntry memory log = logs[0];
@@ -124,10 +119,14 @@ contract CreditPassportASC {
 
         // data: (amountRepaid, remainingDebt, timestamp)
         require(log.data.length == 96, "bad log data");
-        (uint256 amountRepaid, uint256 remainingDebt,) =
-            abi.decode(log.data, (uint256, uint256, uint64));
+        (uint256 amountRepaid, uint256 remainingDebt,) = abi.decode(log.data, (uint256, uint256, uint64));
+        if (remainingDebt != 0) revert LoanNotClosed(remainingDebt);
+        if (creditedLoans[borrower][loanId]) {
+            revert LoanAlreadyCredited(borrower, loanId);
+        }
+        creditedLoans[borrower][loanId] = true;
 
-        uint256 newScore = creditScore.applyRepayment(borrower, remainingDebt);
+        uint256 newScore = creditScore.applyRepayment(borrower, 0);
         creditLine.setCapFromScore(borrower, newScore);
         uint256 tokenId = passportNFT.mintOrUpdate(borrower, newScore);
         uint256 cap = creditLine.borrowCapOf(borrower);

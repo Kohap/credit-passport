@@ -14,6 +14,7 @@ contract MockMarket {
     error LoanNotActive();
     error NotBorrower();
     error InsufficientDebt();
+    error DemoLoanAlreadyOpened();
 
     struct Loan {
         address borrower;
@@ -25,18 +26,13 @@ contract MockMarket {
     IERC20 public immutable asset;
     uint256 public nextLoanId = 1;
     mapping(uint256 => Loan) public loans;
+    mapping(address => bool) public hasOpenedDemoLoan;
 
-    event LoanOpened(
-        address indexed borrower, uint256 indexed loanId, uint256 principal, uint64 timestamp
-    );
+    event LoanOpened(address indexed borrower, uint256 indexed loanId, uint256 principal, uint64 timestamp);
 
     /// @notice Cross-chain signal. Do NOT replace with a generic ERC20 Transfer.
     event LoanRepaid(
-        address indexed borrower,
-        uint256 indexed loanId,
-        uint256 amountRepaid,
-        uint256 remainingDebt,
-        uint64 timestamp
+        address indexed borrower, uint256 indexed loanId, uint256 amountRepaid, uint256 remainingDebt, uint64 timestamp
     );
 
     constructor(address asset_) {
@@ -49,9 +45,10 @@ contract MockMarket {
     ///      for repayments; for demos we also mint via MockUSD.mint into the market.
     function openLoan(uint256 principal) external returns (uint256 loanId) {
         if (principal == 0) revert InvalidAmount();
+        if (hasOpenedDemoLoan[msg.sender]) revert DemoLoanAlreadyOpened();
+        hasOpenedDemoLoan[msg.sender] = true;
         loanId = nextLoanId++;
-        loans[loanId] =
-            Loan({borrower: msg.sender, principal: principal, debt: principal, active: true});
+        loans[loanId] = Loan({borrower: msg.sender, principal: principal, debt: principal, active: true});
         asset.safeTransfer(msg.sender, principal);
         emit LoanOpened(msg.sender, loanId, principal, uint64(block.timestamp));
     }

@@ -34,9 +34,12 @@ contract CreditPassportLogicTest is Test {
         usd.mint(address(line), 1_000_000 ether);
     }
 
-    function test_score_firstPartialThenClosed() public {
-        assertEq(score.applyRepayment(borrower, 50 ether), 40);
-        assertEq(score.applyRepayment(borrower, 0), 70);
+    function test_score_closedRepaymentsOnly() public {
+        vm.expectRevert(CreditScore.LoanNotClosed.selector);
+        score.applyRepayment(borrower, 1);
+
+        assertEq(score.applyRepayment(borrower, 0), 50);
+        assertEq(score.applyRepayment(borrower, 0), 80);
         assertEq(score.repaymentCountOf(borrower), 2);
     }
 
@@ -72,17 +75,13 @@ contract CreditPassportLogicTest is Test {
     }
 
     function test_asc_wrongChainKeyReverts() public {
-        INativeQueryVerifier.MerkleProofEntry[] memory siblings =
-            new INativeQueryVerifier.MerkleProofEntry[](0);
+        INativeQueryVerifier.MerkleProofEntry[] memory siblings = new INativeQueryVerifier.MerkleProofEntry[](0);
         bytes32[] memory roots = new bytes32[](0);
         vm.expectRevert(abi.encodeWithSelector(CreditPassportASC.WrongChainKey.selector, uint64(99)));
         asc.proveRepayment(99, 1, hex"00", bytes32(uint256(1)), siblings, bytes32(0), roots, address(0));
     }
 
-    function test_loanRepaid_eventSignatureMatchesSpec() public {
-        assertEq(
-            asc.LOAN_REPAID_SIGNATURE(),
-            keccak256("LoanRepaid(address,uint256,uint256,uint256,uint64)")
-        );
+    function test_loanRepaid_eventSignatureMatchesSpec() public view {
+        assertEq(asc.LOAN_REPAID_SIGNATURE(), keccak256("LoanRepaid(address,uint256,uint256,uint256,uint64)"));
     }
 }

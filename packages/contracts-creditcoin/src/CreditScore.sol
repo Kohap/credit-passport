@@ -5,10 +5,10 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title CreditScore
 /// @notice On-chain credit score storage for Credit Passport.
-/// @dev Scoring (v1):
-///      - +40 first verified repayment
-///      - +20 each additional verified repayment
-///      - +10 if remainingDebt == 0 (loan closed)
+/// @dev Scoring (v2):
+///      - only closed loans may be credited
+///      - +50 first verified closed repayment
+///      - +30 each additional verified closed repayment
 ///      - total capped at 100
 contract CreditScore is Ownable {
     address public writer;
@@ -17,6 +17,8 @@ contract CreditScore is Ownable {
 
     event WriterUpdated(address indexed writer);
     event ScoreUpdated(address indexed borrower, uint256 oldScore, uint256 newScore, uint256 repaymentCount);
+
+    error LoanNotClosed();
 
     modifier onlyWriter() {
         require(msg.sender == writer, "not writer");
@@ -30,18 +32,12 @@ contract CreditScore is Ownable {
         emit WriterUpdated(writer_);
     }
 
-    /// @notice Apply the v1 scoring formula after a verified repayment.
-    function applyRepayment(address borrower, uint256 remainingDebt)
-        external
-        onlyWriter
-        returns (uint256 newScore)
-    {
+    /// @notice Apply the scoring formula after a verified, fully closed repayment.
+    function applyRepayment(address borrower, uint256 remainingDebt) external onlyWriter returns (uint256 newScore) {
+        if (remainingDebt != 0) revert LoanNotClosed();
         uint256 old = scoreOf[borrower];
         uint256 count = repaymentCountOf[borrower];
-        uint256 delta = count == 0 ? 40 : 20;
-        if (remainingDebt == 0) {
-            delta += 10;
-        }
+        uint256 delta = count == 0 ? 50 : 30;
         newScore = old + delta;
         if (newScore > 100) newScore = 100;
 

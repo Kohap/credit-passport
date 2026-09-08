@@ -11,11 +11,7 @@ contract MockMarketTest is Test {
     address internal borrower = address(0xB0);
 
     event LoanRepaid(
-        address indexed borrower,
-        uint256 indexed loanId,
-        uint256 amountRepaid,
-        uint256 remainingDebt,
-        uint64 timestamp
+        address indexed borrower, uint256 indexed loanId, uint256 amountRepaid, uint256 remainingDebt, uint64 timestamp
     );
 
     function setUp() public {
@@ -54,6 +50,20 @@ contract MockMarketTest is Test {
         (,, uint256 debt, bool active) = market.loans(loanId);
         assertEq(debt, 60 ether);
         assertTrue(active);
+    }
+
+    function test_cannotOpenMoreThanOneDemoLoan() public {
+        vm.startPrank(borrower);
+        market.openLoan(100 ether);
+        vm.expectRevert(MockMarket.DemoLoanAlreadyOpened.selector);
+        market.openLoan(100 ether);
+        vm.stopPrank();
+    }
+
+    function test_onlyOwnerCanMintMarketInventory() public {
+        vm.prank(borrower);
+        vm.expectRevert();
+        usd.mint(borrower, 1 ether);
     }
 
     function test_repay_revertsIfNotBorrower() public {

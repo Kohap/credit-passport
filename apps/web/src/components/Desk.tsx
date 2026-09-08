@@ -55,6 +55,32 @@ type ActiveLoan = {
   debt: bigint;
 };
 
+const MAX_UINT256 = (1n << 256n) - 1n;
+
+function parseLoanIdInput(value: string): bigint {
+  const trimmed = value.trim();
+  if (!/^\d{1,78}$/.test(trimmed)) {
+    throw new Error("Loan ID must be a whole number.");
+  }
+  const id = BigInt(trimmed);
+  if (id === 0n || id > MAX_UINT256) {
+    throw new Error("Loan ID is outside the supported range.");
+  }
+  return id;
+}
+
+function parseAmountInput(value: string, label: string): bigint {
+  const trimmed = value.trim();
+  if (!/^(?:0|[1-9]\d{0,58})(?:\.\d{1,18})?$/.test(trimmed)) {
+    throw new Error(`${label} must be a positive amount with up to 18 decimal places.`);
+  }
+  const parsed = parseEther(trimmed);
+  if (parsed === 0n || parsed > MAX_UINT256) {
+    throw new Error(`${label} is outside the supported range.`);
+  }
+  return parsed;
+}
+
 function isConfigured(addr: string): boolean {
   return /^0x[0-9a-fA-F]{40}$/.test(addr) && !/^0x0+$/.test(addr.slice(2));
 }
@@ -242,39 +268,50 @@ export function Desk() {
     query: { enabled: creditReady },
   });
 
-  const { data: nextLoanId, refetch: refetchLoanCounter } = useReadContract({
-    address: addresses.sepoliaMockMarket as Address,
-    abi: mockMarketAbi,
-    functionName: "nextLoanId",
-    chainId: SEPOLIA_CHAIN_ID,
-    query: { enabled: Boolean(address) && sepoliaReady },
-  });
-
   useEffect(() => {
     let cancelled = false;
     async function loadActiveLoans() {
-      if (!address || !sepoliaClient || !nextLoanId || nextLoanId <= 1n) {
+      if (!address || !sepoliaClient) {
         setActiveLoans([]);
         setActiveLoansBusy(false);
         return;
       }
       setActiveLoansBusy(true);
       try {
+        const opened = await sepoliaClient.getContractEvents({
+          address: addresses.sepoliaMockMarket as Address,
+          abi: mockMarketAbi,
+          eventName: "LoanOpened",
+          args: { borrower: address },
+        });
         const ids = Array.from(
-          { length: Number(nextLoanId - 1n) },
-          (_, index) => BigInt(index + 1),
-        );
-        const loans = await Promise.all(
-          ids.map(async (id) => {
-            const [borrower, principal, debt, active] = await sepoliaClient.readContract({
-              address: addresses.sepoliaMockMarket as Address,
-              abi: mockMarketAbi,
-              functionName: "loans",
-              args: [id],
-            });
-            return { id, borrower, principal, debt, active };
-          }),
-        );
+          new Set(
+            opened.flatMap((log) =>
+              log.args.loanId === undefined ? [] : [log.args.loanId],
+            ),
+          ),
+        ).slice(-50);
+        const loans = [] as {
+          id: bigint;
+          borrower: Address;
+          principal: bigint;
+          debt: bigint;
+          active: boolean;
+        }[];
+        for (let index = 0; index < ids.length; index += 10) {
+          const batch = await Promise.all(
+            ids.slice(index, index + 10).map(async (id) => {
+              const [borrower, principal, debt, active] = await sepoliaClient.readContract({
+                address: addresses.sepoliaMockMarket as Address,
+                abi: mockMarketAbi,
+                functionName: "loans",
+                args: [id],
+              });
+              return { id, borrower, principal, debt, active };
+            }),
+          );
+          loans.push(...batch);
+        }
         if (!cancelled) {
           setActiveLoans(
             loans
@@ -295,7 +332,7 @@ export function Desk() {
     return () => {
       cancelled = true;
     };
-  }, [address, nextLoanId, sepoliaClient, loanRefresh]);
+  }, [address, sepoliaClient, loanRefresh]);
 
   const activeLoanDebt = useMemo(
     () => activeLoans.reduce((total, loan) => total + loan.debt, 0n),
@@ -384,19 +421,7 @@ export function Desk() {
     setFaucetBusy(true);
     try {
       const request = await selectedWalletRequest();
-      const faucetAmount = parseEther("1000");
-      const sendMUsd = (functionName: "faucet" | "mint") =>
-        sendPopulatedWrite({
-          account: address,
-          address: addresses.sepoliaMockUsd as Address,
-          abi: mockUsdAbi,
-          functionName,
-          functionArgs: functionName === "mint" ? [address, faucetAmount] : undefined,
-          chainId: SEPOLIA_CHAIN_ID,
-          request,
-        });
-
-      let useHourlyFaucet = true;
+      let nextFaucetAt: bigint | undefined;
       try {
         if (sepoliaClient) {
           const last = await withTimeout(
@@ -410,31 +435,36 @@ export function Desk() {
             "Sepolia RPC took too long while checking faucet cooldown.",
           );
           const now = BigInt(Math.floor(Date.now() / 1000));
-          useHourlyFaucet = last === 0n || now >= last + 3600n;
+          if (last !== 0n && now < last + 3600n) {
+            nextFaucetAt = last + 3600n;
+          }
         }
       } catch {
-        useHourlyFaucet = true;
+        // Let the transaction surface an RPC or contract error if the cooldown check is unavailable.
+      }
+      if (nextFaucetAt) {
+        const remainingSeconds = Number(nextFaucetAt - BigInt(Math.floor(Date.now() / 1000)));
+        throw new Error(`Faucet available again in ${formatAttestationEstimate(Math.ceil(remainingSeconds / 12))}.`);
       }
 
-      setStatus(
-        useHourlyFaucet
-          ? "Confirm the mUSD faucet in Rabby or MetaMask."
-          : "Hourly faucet already used. Confirm the demo mint fallback.",
-      );
-
+      setStatus("Confirm the mUSD faucet in Rabby or MetaMask.");
       let hash: Hex;
       try {
-        hash = await sendMUsd(useHourlyFaucet ? "faucet" : "mint");
+        hash = await sendPopulatedWrite({
+          account: address,
+          address: addresses.sepoliaMockUsd as Address,
+          abi: mockUsdAbi,
+          functionName: "faucet",
+          chainId: SEPOLIA_CHAIN_ID,
+          request,
+        });
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        if (/rejected|denied|4001/i.test(msg)) throw err;
-        if (/0 Sepolia ETH|Not enough Sepolia ETH|insufficient funds/i.test(msg)) throw err;
         if (/Add Sepolia/i.test(msg)) {
           setStatus("Adding Sepolia to the wallet. Confirm the network prompt.");
           await addNetworks();
         }
-        setStatus("Faucet unavailable or cooling down. Confirm the demo mint fallback.");
-        hash = await sendMUsd("mint");
+        throw err;
       }
 
       setFaucetTx(hash);
@@ -476,7 +506,7 @@ export function Desk() {
       await ensureSepolia();
       if (!address) throw new Error("Connect wallet first.");
       if (!sepoliaClient) throw new Error("Sepolia RPC unavailable.");
-      const principal = parseEther(amount || "100");
+      const principal = parseAmountInput(amount || "100", "Loan amount");
       const hash = await sendPopulatedWrite({
         publicClient: sepoliaClient,
         account: address,
@@ -508,7 +538,6 @@ export function Desk() {
       }
       setLoanId(openedLoanId.toString());
       setLoanRefresh((current) => current + 1);
-      await refetchLoanCounter();
       setStatus(`Loan #${openedLoanId} confirmed. Repay this loan next.`);
     } catch (err: unknown) {
       setStatus(err instanceof Error ? err.message : String(err));
@@ -527,7 +556,7 @@ export function Desk() {
       const requestedIds = repayAll
         ? activeLoans.map((loan) => loan.id)
         : loanId.trim()
-          ? [BigInt(loanId)]
+          ? [parseLoanIdInput(loanId)]
           : [];
       if (!requestedIds.length) {
         throw new Error(
@@ -536,7 +565,7 @@ export function Desk() {
             : "Select an active loan or enter its loan ID before repaying.",
         );
       }
-      const requestedAmount = repayAll ? 0n : parseEther(amount || "100");
+      const requestedAmount = repayAll ? 0n : parseAmountInput(amount || "100", "Repayment amount");
       const currentLoans = await Promise.all(
         requestedIds.map(async (id) => {
           const [borrower, principal, debt, active] = await sepoliaClient.readContract({

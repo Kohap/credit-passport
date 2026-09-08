@@ -4,6 +4,7 @@ import {
   PROOF_BUILDER_URL,
   PROOF_BUILDER_URL_FALLBACK,
   SEPOLIA_CHAIN_KEY,
+  SEPOLIA_RPC,
 } from "@/config/networks";
 
 export type ProofPayload = {
@@ -60,6 +61,12 @@ type ProverFailure = {
 
 const PROVER_POLL_MS = 5_000;
 const PROVER_TIMEOUT_MS = 1_200_000;
+const PROVER_REQUEST_WINDOW_MS = 60_000;
+const MAX_PROVER_REQUESTS_PER_WINDOW = 30;
+const MAX_PROOF_JSON_BYTES = 1_000_000;
+const MAX_TX_BYTES = 512_000;
+const MAX_PROOF_NODES = 1_024;
+const proverRequestTimes: number[] = [];
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -72,9 +79,20 @@ function makeProverUrl(base: string, path: string) {
 function getMessage(data: unknown, fallback: string) {
   if (data && typeof data === "object" && "message" in data) {
     const message = (data as { message?: unknown }).message;
-    if (typeof message === "string" && message) return message;
+    if (typeof message === "string" && message) return message.slice(0, 300);
   }
   return fallback;
+}
+
+function reserveProverRequest() {
+  const now = Date.now();
+  while (proverRequestTimes[0] !== undefined && now - proverRequestTimes[0] >= PROVER_REQUEST_WINDOW_MS) {
+    proverRequestTimes.shift();
+  }
+  if (proverRequestTimes.length >= MAX_PROVER_REQUESTS_PER_WINDOW) {
+    throw new Error("Proof request limit reached. Wait a minute before trying again.");
+  }
+  proverRequestTimes.push(now);
 }
 
 async function fetchProverJson<T>(base: string, path: string): Promise<
@@ -82,16 +100,29 @@ async function fetchProverJson<T>(base: string, path: string): Promise<
   | { ok: false; failure: ProverFailure }
 > {
   let response: Response;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20_000);
   try {
+    reserveProverRequest();
     response = await fetch(makeProverUrl(base, path), {
       cache: "no-store",
       headers: { Accept: "application/json" },
+      signal: controller.signal,
     });
   } catch (cause) {
     throw new ProverNetworkError(cause);
+  } finally {
+    clearTimeout(timeout);
   }
 
+  const contentLength = Number(response.headers.get("content-length") ?? "0");
+  if (Number.isFinite(contentLength) && contentLength > MAX_PROOF_JSON_BYTES) {
+    throw new Error("Proof service response is too large.");
+  }
   const body = await response.text();
+  if (body.length > MAX_PROOF_JSON_BYTES) {
+    throw new Error("Proof service response is too large.");
+  }
   let data: unknown = body;
   try {
     data = body ? JSON.parse(body) : undefined;
@@ -118,6 +149,74 @@ async function fetchProverJson<T>(base: string, path: string): Promise<
             (data as { retriable?: unknown }).retriable,
         ),
     },
+  };
+}
+
+function asRecord(value: unknown, field: string): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`${field} must be an object`);
+  }
+  return value as Record<string, unknown>;
+}
+
+function asSafeInteger(value: unknown, field: string, minimum = 0): number {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < minimum) {
+    throw new Error(`${field} must be a safe integer`);
+  }
+  return value;
+}
+
+function asHex(value: unknown, field: string, bytes?: number, maxBytes?: number): Hex {
+  if (typeof value !== "string" || !isHexString(value, bytes)) {
+    throw new Error(`${field} must be valid hex`);
+  }
+  const size = (value.length - 2) / 2;
+  if (maxBytes !== undefined && size > maxBytes) {
+    throw new Error(`${field} exceeds the maximum size`);
+  }
+  return value as Hex;
+}
+
+function normaliseProofPayload(
+  source: Record<string, unknown>,
+  txHash: string,
+  sepoliaBlockNumber: number,
+): ProofPayload {
+  const chainKey = asSafeInteger(source.chainKey, "chainKey", 1);
+  if (chainKey !== SEPOLIA_CHAIN_KEY) {
+    throw new Error("Proof was generated for an unexpected source chain");
+  }
+  const headerNumber = asSafeInteger(source.headerNumber, "headerNumber", 1);
+  const txIndex = asSafeInteger(source.txIndex ?? 0, "txIndex");
+  const siblings = source.siblings;
+  const continuityRoots = source.continuityRoots;
+  if (!Array.isArray(siblings) || siblings.length > MAX_PROOF_NODES) {
+    throw new Error("siblings must be a bounded array");
+  }
+  if (!Array.isArray(continuityRoots) || continuityRoots.length > MAX_PROOF_NODES) {
+    throw new Error("continuityRoots must be a bounded array");
+  }
+
+  return {
+    sepoliaTxHash: asHex(txHash, "sepoliaTxHash", 32),
+    sepoliaBlockNumber: asSafeInteger(sepoliaBlockNumber, "sepoliaBlockNumber"),
+    chainKey,
+    headerNumber,
+    txIndex,
+    merkleRoot: asHex(source.merkleRoot, "merkleRoot", 32),
+    siblings: siblings.map((entry, index) => {
+      const node = asRecord(entry, `siblings[${index}]`);
+      if (typeof node.isLeft !== "boolean") {
+        throw new Error(`siblings[${index}].isLeft must be boolean`);
+      }
+      return { hash: asHex(node.hash, `siblings[${index}].hash`, 32), isLeft: node.isLeft };
+    }),
+    lowerEndpointDigest: asHex(source.lowerEndpointDigest, "lowerEndpointDigest", 32),
+    continuityRoots: continuityRoots.map((root, index) =>
+      asHex(root, `continuityRoots[${index}]`, 32),
+    ),
+    txBytes: asHex(source.txBytes, "txBytes", undefined, MAX_TX_BYTES),
+    cached: Boolean(source.cached),
   };
 }
 
@@ -173,19 +272,21 @@ function toProofPayload(
   ) {
     throw new Error("Proof service returned an incomplete proof");
   }
-  return {
-    sepoliaTxHash: txHash,
+  return normaliseProofPayload(
+    {
+      chainKey: data.chainKey,
+      headerNumber: data.headerNumber,
+      txIndex: data.txIndex,
+      merkleRoot: data.merkleProof.root,
+      siblings: data.merkleProof.siblings,
+      lowerEndpointDigest: data.continuityProof.lowerEndpointDigest,
+      continuityRoots: data.continuityProof.roots,
+      txBytes: data.txBytes,
+      cached: data.cached,
+    },
+    txHash,
     sepoliaBlockNumber,
-    chainKey: data.chainKey,
-    headerNumber: data.headerNumber,
-    txIndex: data.txIndex,
-    merkleRoot: data.merkleProof.root,
-    siblings: data.merkleProof.siblings,
-    lowerEndpointDigest: data.continuityProof.lowerEndpointDigest,
-    continuityRoots: data.continuityProof.roots,
-    txBytes: data.txBytes,
-    cached: Boolean(data.cached),
-  };
+  );
 }
 
 /**
@@ -200,17 +301,10 @@ export async function buildProof(
     throw new Error("invalid Sepolia tx hash");
   }
 
-  const sepoliaRpc =
-    process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL ??
-    "https://ethereum-sepolia-rpc.publicnode.com";
-  const primary =
-    process.env.NEXT_PUBLIC_PROOF_BUILDER_URL ?? PROOF_BUILDER_URL;
-  const fallback =
-    process.env.NEXT_PUBLIC_PROOF_BUILDER_URL_FALLBACK ??
-    PROOF_BUILDER_URL_FALLBACK;
-  const chainKey = Number(
-    process.env.NEXT_PUBLIC_SEPOLIA_CHAIN_KEY ?? SEPOLIA_CHAIN_KEY,
-  );
+  const sepoliaRpc = SEPOLIA_RPC;
+  const primary = PROOF_BUILDER_URL;
+  const fallback = PROOF_BUILDER_URL_FALLBACK;
+  const chainKey = SEPOLIA_CHAIN_KEY;
 
   try {
     const source = new JsonRpcProvider(sepoliaRpc);
@@ -307,27 +401,30 @@ export async function buildProof(
  * Thin fallback: older nested `{ proof: { merkleProof, continuityProof } }` CLI dumps.
  */
 export function parsePastableProof(raw: string, fallbackTx?: string): ProofPayload {
+  if (raw.length > MAX_PROOF_JSON_BYTES) {
+    throw new Error("proof JSON exceeds the maximum size");
+  }
   const parsed: unknown = JSON.parse(raw);
   if (!parsed || typeof parsed !== "object") {
     throw new Error("proof JSON must be an object");
   }
   const obj = parsed as Record<string, unknown>;
+  const pastedTx = String(obj.sepoliaTxHash ?? fallbackTx ?? "");
+  if (
+    fallbackTx &&
+    isHexString(pastedTx, 32) &&
+    pastedTx.toLowerCase() !== fallbackTx.toLowerCase()
+  ) {
+    throw new Error("proof JSON belongs to a different Sepolia repayment");
+  }
 
   // Canonical flat document (ADR-0003)
   if (typeof obj.merkleRoot === "string" && typeof obj.txBytes === "string") {
-    return {
-      sepoliaTxHash: String(obj.sepoliaTxHash ?? fallbackTx ?? ""),
-      sepoliaBlockNumber: Number(obj.sepoliaBlockNumber ?? 0),
-      chainKey: Number(obj.chainKey ?? 1),
-      headerNumber: Number(obj.headerNumber),
-      txIndex: Number(obj.txIndex ?? 0),
-      merkleRoot: obj.merkleRoot as Hex,
-      siblings: (obj.siblings as ProofPayload["siblings"]) ?? [],
-      lowerEndpointDigest: obj.lowerEndpointDigest as Hex,
-      continuityRoots: (obj.continuityRoots as Hex[]) ?? [],
-      txBytes: obj.txBytes as Hex,
-      cached: Boolean(obj.cached),
-    };
+    return normaliseProofPayload(
+      obj,
+      pastedTx,
+      Number(obj.sepoliaBlockNumber ?? 0),
+    );
   }
 
   // Legacy nested worker dump — remove once all proof.json files are flat
@@ -344,22 +441,21 @@ export function parsePastableProof(raw: string, fallbackTx?: string): ProofPaylo
     if (!merkle?.root || !continuity?.lowerEndpointDigest || !proof.txBytes) {
       throw new Error("legacy nested proof missing merkleProof / continuityProof / txBytes");
     }
-    return {
-      sepoliaTxHash: String(obj.sepoliaTxHash ?? fallbackTx ?? ""),
-      sepoliaBlockNumber: Number(obj.sepoliaBlockNumber ?? 0),
-      chainKey: Number(proof.chainKey ?? obj.chainKey ?? 1),
-      headerNumber: Number(proof.headerNumber ?? obj.headerNumber),
-      txIndex: Number(proof.txIndex ?? 0),
-      merkleRoot: merkle.root as Hex,
-      siblings: merkle.siblings.map((s) => ({
-        hash: s.hash as Hex,
-        isLeft: Boolean(s.isLeft),
-      })),
-      lowerEndpointDigest: continuity.lowerEndpointDigest as Hex,
-      continuityRoots: continuity.roots as Hex[],
-      txBytes: String(proof.txBytes) as Hex,
-      cached: Boolean(proof.cached),
-    };
+    return normaliseProofPayload(
+      {
+        chainKey: proof.chainKey ?? obj.chainKey ?? 1,
+        headerNumber: proof.headerNumber ?? obj.headerNumber,
+        txIndex: proof.txIndex ?? 0,
+        merkleRoot: merkle.root,
+        siblings: merkle.siblings,
+        lowerEndpointDigest: continuity.lowerEndpointDigest,
+        continuityRoots: continuity.roots,
+        txBytes: proof.txBytes,
+        cached: proof.cached,
+      },
+      pastedTx,
+      Number(obj.sepoliaBlockNumber ?? 0),
+    );
   }
 
   throw new Error(

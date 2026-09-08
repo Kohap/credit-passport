@@ -248,7 +248,7 @@ async function main(): Promise<void> {
   }
 
   if (submit) {
-    const pk = process.env.CREDITCOIN_PRIVATE_KEY;
+    const pk = env.CREDITCOIN_PRIVATE_KEY;
     if (!pk) throw new Error("CREDITCOIN_PRIVATE_KEY required for --submit");
     const wallet = new Wallet(pk, creditcoinProvider);
     console.log(`Submitting proveRepayment from ${wallet.address} → ${asc}`);

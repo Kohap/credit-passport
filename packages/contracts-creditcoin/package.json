@@ -1,7 +1,7 @@
 {
   "name": "contracts-creditcoin",
   "version": "1.0.0",
-  "description": "**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**",
+  "description": "Credit Passport contracts deployed on Creditcoin CC3 testnet.",
   "main": "index.js",
   "directories": {
     "lib": "lib",
@@ -9,7 +9,7 @@
   },
   "devDependencies": {},
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "bash ../../scripts/bootstrap-contract-deps.sh && forge test -vv"
   },
   "keywords": [],
   "author": "",

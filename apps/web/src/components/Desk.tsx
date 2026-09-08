@@ -56,6 +56,7 @@ type ActiveLoan = {
 };
 
 const MAX_UINT256 = (1n << 256n) - 1n;
+const DEMO_BORROW_AMOUNT = parseEther("10");
 
 const sepoliaWalletChain: WalletChain = {
   id: SEPOLIA_CHAIN_ID,
@@ -838,8 +839,7 @@ export function Desk() {
     try {
       if (!address) throw new Error("Connect wallet first.");
       if (!creditcoinClient) throw new Error("Creditcoin RPC unavailable.");
-      const demoAmount = parseEther("10");
-      if (lineBalance !== undefined && lineBalance < demoAmount) {
+      if (lineBalance !== undefined && lineBalance < DEMO_BORROW_AMOUNT) {
         setStatus(
           "The demo credit pool needs refilling. Please try again later.",
         );
@@ -852,7 +852,7 @@ export function Desk() {
         address: addresses.creditLine as Address,
         abi: creditLineAbi,
         functionName: "borrow",
-        functionArgs: [demoAmount],
+        functionArgs: [DEMO_BORROW_AMOUNT],
         chain: creditcoinWalletChain,
         request: await selectedWalletRequest(),
       });
@@ -1245,11 +1245,25 @@ export function Desk() {
           <span className="section-kicker">Step 03</span>
         </div>
         <p>Once verified, your Credit Passport and demo borrowing limit appear here.</p>
+        <p className="credit-pool-note" data-ready={lineBalance !== undefined && lineBalance >= DEMO_BORROW_AMOUNT}>
+          {lineBalance === undefined
+            ? "Checking whether the demo credit pool is ready..."
+            : lineBalance >= DEMO_BORROW_AMOUNT
+              ? "Demo credit pool ready for a 10 mUSD borrow."
+              : "The demo credit pool is being refilled. Try again shortly."}
+        </p>
         <div className="actions">
           <button
             type="button"
             className="btn btn-primary"
-            disabled={!isConnected || !creditReady || phase !== "verified" || borrowBusy}
+            disabled={
+              !isConnected ||
+              !creditReady ||
+              phase !== "verified" ||
+              borrowBusy ||
+              lineBalance === undefined ||
+              lineBalance < DEMO_BORROW_AMOUNT
+            }
             onClick={() => void borrowOnCreditcoin()}
           >
             {borrowBusy ? "Confirm in wallet..." : "Borrow 10 mUSD (demo)"}

@@ -617,6 +617,16 @@ textarea.input {
   background: color-mix(in srgb, var(--bad) 10%, transparent);
 }
 
+.credit-pool-note {
+  margin: 1rem 0 0;
+  color: var(--mute);
+  font-size: 0.95rem;
+}
+
+.credit-pool-note[data-ready="true"] {
+  color: var(--ok);
+}
+
 .cors-panel {
   margin-top: 1.25rem;
   padding: 1rem 0 0;

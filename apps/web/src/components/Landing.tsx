@@ -176,9 +176,9 @@ export function Landing() {
           <a href="#builders" className="landing-nav-optional" onClick={closeMenu}>
             Builders
           </a>
-          <a href="#legal" className="landing-nav-strong" onClick={closeMenu}>
+          <Link href="/terms" className="landing-nav-strong" onClick={closeMenu}>
             Terms &amp; Conditions
-          </a>
+          </Link>
           <Link href="/app" className="landing-nav-strong landing-nav-desktop-desk" onClick={closeMenu}>
             Open Desk
           </Link>
@@ -329,7 +329,7 @@ export function Landing() {
             Credit Passport is a public testnet demo. Its demo funds have no market value, it
             does not provide real-world credit, and you remain in control of your wallet.
           </p>
-          <Link href="/docs" className="landing-inline-link">Read the demo and privacy details</Link>
+          <Link href="/terms" className="landing-inline-link">Read the Terms &amp; Conditions</Link>
         </section>
       </main>
 
@@ -352,7 +352,7 @@ export function Landing() {
           <p className="landing-footer-links">
             <a href="#product">Product</a>
             <a href="#builders">Builders</a>
-            <a href="#legal">Terms &amp; Conditions</a>
+            <Link href="/terms">Terms &amp; Conditions</Link>
             <Link href="/docs">Docs</Link>
           </p>
         </div>

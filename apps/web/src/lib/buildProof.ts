@@ -59,6 +59,10 @@ type ProverFailure = {
   retriable: boolean;
 };
 
+type ProverResult<T> =
+  | { ok: true; data: T }
+  | { ok: false; failure: ProverFailure };
+
 const PROVER_POLL_MS = 5_000;
 const PROVER_TIMEOUT_MS = 1_200_000;
 const PROVER_REQUEST_WINDOW_MS = 60_000;
@@ -95,10 +99,7 @@ function reserveProverRequest() {
   proverRequestTimes.push(now);
 }
 
-async function fetchProverJson<T>(base: string, path: string): Promise<
-  | { ok: true; data: T }
-  | { ok: false; failure: ProverFailure }
-> {
+async function fetchProverJson<T>(base: string, path: string): Promise<ProverResult<T>> {
   let response: Response;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 20_000);
@@ -332,14 +333,21 @@ export async function buildProof(
     ].filter(
       (u, i, arr) => Boolean(u) && arr.indexOf(u) === i,
     );
-    const { proofUrl, attestedHeight } = await chooseProver(
+    const chosenProver = await chooseProver(
       proverUrls,
       chainKey,
       txHash,
       onStatus,
     );
     const deadline = Date.now() + PROVER_TIMEOUT_MS;
-    let latestAttestedHeight = attestedHeight;
+    let proofUrl = chosenProver.proofUrl;
+    let proverIndex = Math.max(proverUrls.indexOf(proofUrl), 0);
+    let latestAttestedHeight = chosenProver.attestedHeight;
+
+    function useNextProver() {
+      proverIndex = (proverIndex + 1) % proverUrls.length;
+      proofUrl = proverUrls[proverIndex];
+    }
 
     while (Date.now() < deadline) {
       if (latestAttestedHeight < receipt.blockNumber) {
@@ -347,13 +355,22 @@ export async function buildProof(
           `Waiting for attestation: proof service has ${latestAttestedHeight}; repayment is in ${receipt.blockNumber}.`,
         );
         await sleep(PROVER_POLL_MS);
-        const height = await fetchProverJson<{ attestedHeight?: unknown }>(
-          proofUrl,
-          `/api/v1/attested-height/${chainKey}`,
-        );
+        let height: ProverResult<{ attestedHeight?: unknown }>;
+        try {
+          height = await fetchProverJson<{ attestedHeight?: unknown }>(
+            proofUrl,
+            `/api/v1/attested-height/${chainKey}`,
+          );
+        } catch (error) {
+          if (!(error instanceof ProverNetworkError)) throw error;
+          useNextProver();
+          onStatus?.("Proof service connection dropped; trying the backup service...");
+          continue;
+        }
         if (!height.ok) {
           if (!height.failure.retriable) throw new Error(height.failure.message);
-          onStatus?.(`Proof service is temporarily unavailable; retrying…`);
+          useNextProver();
+          onStatus?.("Proof service is temporarily unavailable; trying the backup service...");
           continue;
         }
         if (typeof height.data.attestedHeight !== "number") {
@@ -364,21 +381,39 @@ export async function buildProof(
       }
 
       onStatus?.("Generating Merkle + continuity proof…");
-      const proof = await fetchProverJson<ProverResponse>(
-        proofUrl,
-        `/api/v1/proof-by-tx/${chainKey}/${txHash}`,
-      );
+      let proof: ProverResult<ProverResponse>;
+      try {
+        proof = await fetchProverJson<ProverResponse>(
+          proofUrl,
+          `/api/v1/proof-by-tx/${chainKey}/${txHash}`,
+        );
+      } catch (error) {
+        if (!(error instanceof ProverNetworkError)) throw error;
+        useNextProver();
+        onStatus?.("Proof service connection dropped; trying the backup service...");
+        await sleep(PROVER_POLL_MS);
+        continue;
+      }
       if (proof.ok) return toProofPayload(txHash, receipt.blockNumber, proof.data);
       if (!proof.failure.retriable) throw new Error(proof.failure.message);
 
-      onStatus?.("Proof service is indexing the attested block; retrying…");
+      useNextProver();
+      onStatus?.("Proof service is indexing the attested block; trying the backup service...");
       await sleep(PROVER_POLL_MS);
-      const height = await fetchProverJson<{ attestedHeight?: unknown }>(
-        proofUrl,
-        `/api/v1/attested-height/${chainKey}`,
-      );
+      let height: ProverResult<{ attestedHeight?: unknown }>;
+      try {
+        height = await fetchProverJson<{ attestedHeight?: unknown }>(
+          proofUrl,
+          `/api/v1/attested-height/${chainKey}`,
+        );
+      } catch (error) {
+        if (!(error instanceof ProverNetworkError)) throw error;
+        useNextProver();
+        continue;
+      }
       if (!height.ok) {
         if (!height.failure.retriable) throw new Error(height.failure.message);
+        useNextProver();
         continue;
       }
       if (typeof height.data.attestedHeight !== "number") {

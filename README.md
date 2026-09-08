@@ -32,6 +32,10 @@ Sepolia MockMarket repayment
 
 The borrower uses the same wallet on Sepolia and Creditcoin. No oracle operator decides whether a repayment counts: the Creditcoin contract verifies the Attestcoin-backed transaction receipt and requires the expected `LoanRepaid` log from the trusted Sepolia market.
 
+## Security and trust model
+
+The live v2 path rejects a wrong chain key, invalid or replayed proof, failed receipt, untrusted event emitter, different borrower, partial repayment, and duplicate borrower/loan credit. See [`docs/SECURITY.md`](docs/SECURITY.md) for the complete control-to-test mapping and operational limits.
+
 ## V2 end-to-end proof
 
 | Artifact | Value |

@@ -8,7 +8,7 @@ export const ATTESTOR_DASHBOARD = "https://dashboard.cc3-testnet.creditcoin.netw
 /** Public demo URLs. */
 export const DESK_URL = "https://www.creditpassport.xyz/";
 export const PAGES_URL = "https://kohap.github.io/credit-passport/";
-export const ASC_DEFAULT = "0xc5c9B5A4842B20D945aAD6824A58Afdbb78fecbb";
+export const ASC_DEFAULT = "0x5123CdFd395414FcB6c5b8bc10A0843882EfD277";
 
 /** Prefer NEXT_PUBLIC_* when non-empty; empty strings must not wipe baked defaults (Pages/CI). */
 function pub(envVal: string | undefined, fallback: string): string {
@@ -83,31 +83,31 @@ export const SEPOLIA_RPCS: readonly string[] = [
 export const addresses = {
   sepoliaMockUsd: publicAddress(
     process.env.NEXT_PUBLIC_SEPOLIA_MOCK_USD,
-    "0x5D695DD7bd61D22731973F32e84c8D797FEed701",
+    "0x3937cFf0385AF9aAA25212432f030Ddbb1B98798",
   ),
   sepoliaMockMarket: publicAddress(
     process.env.NEXT_PUBLIC_SEPOLIA_MOCK_MARKET,
-    "0xEd2a52496044771bE1a3583f2d7061da33427a6a",
+    "0x697CAf8096Bc604048C0d0CA0Dd587A509108783",
   ),
   creditPassportAsc: publicAddress(
     process.env.NEXT_PUBLIC_CREDITCOIN_PASSPORT_ASC,
-    "0xc5c9B5A4842B20D945aAD6824A58Afdbb78fecbb",
+    "0x5123CdFd395414FcB6c5b8bc10A0843882EfD277",
   ),
   creditScore: publicAddress(
     process.env.NEXT_PUBLIC_CREDITCOIN_CREDIT_SCORE,
-    "0xEd2a52496044771bE1a3583f2d7061da33427a6a",
+    "0x697CAf8096Bc604048C0d0CA0Dd587A509108783",
   ),
   creditLine: publicAddress(
     process.env.NEXT_PUBLIC_CREDITCOIN_CREDIT_LINE,
-    "0xFA2f6AD61e9A1c44eD03509f386DE4DDa5ecfa7e",
+    "0xd23Ba880D8C459A6A489017A021301053b3bC6fb",
   ),
   passportNft: publicAddress(
     process.env.NEXT_PUBLIC_CREDITCOIN_PASSPORT_NFT,
-    "0x3E6CB0dC03e72E57ac91c8D74cF2246079F1B09e",
+    "0xEe9F1B0d59ACcaa33434dF32F9b1233a3C78E381",
   ),
   creditMockUsd: publicAddress(
     process.env.NEXT_PUBLIC_CREDITCOIN_MOCK_USD,
-    "0x5D695DD7bd61D22731973F32e84c8D797FEed701",
+    "0x3937cFf0385AF9aAA25212432f030Ddbb1B98798",
   ),
 } as const;
 

@@ -138,6 +138,15 @@ export function Landing() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
+  useEffect(() => {
+    if (!menuOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [menuOpen]);
+
   function closeMenu() {
     setMenuOpen(false);
   }
@@ -150,6 +159,14 @@ export function Landing() {
           Credit Passport
         </Link>
         <nav className="landing-nav-links" id="landing-primary-menu" data-open={menuOpen} aria-label="Primary">
+          <div className="landing-menu-sheet-head">
+            <Link href="/app" className="landing-menu-desk" onClick={closeMenu}>
+              Open Desk
+            </Link>
+            <button type="button" className="landing-menu-close" onClick={closeMenu}>
+              Close
+            </button>
+          </div>
           <a href="#product" className="landing-nav-strong" onClick={closeMenu}>
             Product
           </a>
@@ -162,7 +179,7 @@ export function Landing() {
           <a href="#legal" className="landing-nav-strong" onClick={closeMenu}>
             Legal
           </a>
-          <Link href="/app" className="landing-nav-strong" onClick={closeMenu}>
+          <Link href="/app" className="landing-nav-strong landing-nav-desktop-desk" onClick={closeMenu}>
             Open Desk
           </Link>
         </nav>

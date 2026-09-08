@@ -4,7 +4,6 @@
 # Same EOA on both chains (ASC BorrowerMismatch otherwise).
 #
 # Usage:
-#   set -a && source .env && set +a
 #   bash scripts/demo-e2e.sh
 #
 # After success: paste HACKATHON PROOF into README, hit record same hour.
@@ -12,13 +11,22 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
+if [[ ! -f .env ]]; then
+  echo "Missing .env. Copy .env.example, set the funded testnet keys, then retry." >&2
+  exit 1
+fi
+set -a
+# shellcheck disable=SC1091
+source .env
+set +a
+
 : "${SEPOLIA_RPC_URL:?}"
 : "${SEPOLIA_PRIVATE_KEY:?}"
 : "${CREDITCOIN_RPC_URL:?}"
 : "${CREDITCOIN_PRIVATE_KEY:?}"
 
-SEPOLIA_MOCK_USD="${SEPOLIA_MOCK_USD:-0x5D695DD7bd61D22731973F32e84c8D797FEed701}"
-SEPOLIA_MOCK_MARKET="${SEPOLIA_MOCK_MARKET:-0xEd2a52496044771bE1a3583f2d7061da33427a6a}"
+SEPOLIA_MOCK_USD="${SEPOLIA_MOCK_USD:-0x3937cFf0385AF9aAA25212432f030Ddbb1B98798}"
+SEPOLIA_MOCK_MARKET="${SEPOLIA_MOCK_MARKET:-0x697CAf8096Bc604048C0d0CA0Dd587A509108783}"
 AMOUNT_WEI=100000000000000000000 # 100 mUSD
 PROOF_JSON="${PROOF_JSON:-/tmp/credit-passport-proof.json}"
 PROOF_LOG="${PROOF_LOG:-/tmp/credit-passport-hackathon-proof.txt}"
@@ -60,7 +68,7 @@ echo "==> Fund CreditLine liquidity on CC3 (best-effort)"
 bash scripts/fund-creditline.sh 1000000 || true
 
 echo "==> Attestcoin prove + submit (can take minutes while height attests)"
-export CREDITCOIN_PASSPORT_ASC="${CREDITCOIN_PASSPORT_ASC:-0xc5c9B5A4842B20D945aAD6824A58Afdbb78fecbb}"
+export CREDITCOIN_PASSPORT_ASC="${CREDITCOIN_PASSPORT_ASC:-0x5123CdFd395414FcB6c5b8bc10A0843882EfD277}"
 set +e
 npm run prove -- "$REPAY_HASH" --submit --claim "$ADDR" --json-out "$PROOF_JSON" 2>&1 | tee "$PROOF_LOG"
 PROVE_RC=${PIPESTATUS[0]}

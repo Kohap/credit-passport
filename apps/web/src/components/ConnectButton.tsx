@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import {
   clearWalletUnlinked,
   markWalletUnlinked,
-  pickWalletAccount,
   revokeWalletSession,
   shouldReconnectWallet,
   type WalletProvider,
@@ -16,6 +15,31 @@ export function ConnectButton() {
   const { connectors, connectAsync, isPending } = useConnect();
   const { disconnect, disconnectAsync } = useDisconnect();
   const [busy, setBusy] = useState(false);
+  const [selectedConnectorUid, setSelectedConnectorUid] = useState<string>();
+
+  const walletConnectors = useMemo(() => {
+    const discovered = connectors.filter((item) => item.id !== "injected");
+    return discovered.length ? discovered : connectors;
+  }, [connectors]);
+  const selectedConnector = useMemo(() => {
+    const selected = walletConnectors.find((item) => item.uid === selectedConnectorUid);
+    if (selected) return selected;
+    return (
+      walletConnectors.find((item) => /rabby/i.test(`${item.id} ${item.name}`)) ??
+      walletConnectors.find((item) => /metamask/i.test(`${item.id} ${item.name}`)) ??
+      walletConnectors[0]
+    );
+  }, [selectedConnectorUid, walletConnectors]);
+
+  useEffect(() => {
+    if (
+      selectedConnectorUid &&
+      walletConnectors.some((item) => item.uid === selectedConnectorUid)
+    ) {
+      return;
+    }
+    setSelectedConnectorUid(selectedConnector?.uid);
+  }, [selectedConnector, selectedConnectorUid, walletConnectors]);
 
   useEffect(() => {
     let off: (() => void) | undefined;
@@ -48,12 +72,10 @@ export function ConnectButton() {
   }
 
   async function onConnect() {
-    const target = connectors.find((item) => item.id === "injected") ?? connectors[0];
+    const target = selectedConnector;
     if (!target) return;
     setBusy(true);
     try {
-      const provider = (await target.getProvider()) as WalletProvider | undefined;
-      await pickWalletAccount(provider);
       clearWalletUnlinked();
       await connectAsync({ connector: target });
     } finally {
@@ -72,13 +94,36 @@ export function ConnectButton() {
   }
 
   return (
-    <button
-      type="button"
-      className="btn btn-primary"
-      disabled={!connectors[0] || isPending || busy}
-      onClick={() => void onConnect()}
-    >
-      {isPending || busy ? "Connecting…" : "Connect wallet"}
-    </button>
+    <div className="wallet-connect">
+      {walletConnectors.length > 1 ? (
+        <label className="wallet-picker" htmlFor="wallet-connector">
+          <span className="sr-only">Wallet</span>
+          <select
+            id="wallet-connector"
+            className="wallet-select"
+            value={selectedConnector?.uid ?? ""}
+            onChange={(event) => setSelectedConnectorUid(event.target.value)}
+          >
+            {walletConnectors.map((item) => (
+              <option key={item.uid} value={item.uid}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+      <button
+        type="button"
+        className="btn btn-primary"
+        disabled={!selectedConnector || isPending || busy}
+        onClick={() => void onConnect()}
+      >
+        {isPending || busy
+          ? "Connecting…"
+          : selectedConnector
+            ? `Connect ${selectedConnector.name}`
+            : "Connect wallet"}
+      </button>
+    </div>
   );
 }

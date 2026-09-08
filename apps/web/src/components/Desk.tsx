@@ -6,11 +6,8 @@ import { ConnectButton } from "@/components/ConnectButton";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   useAccount,
-  useChainId,
   usePublicClient,
   useReadContract,
-  useSwitchChain,
-  useWriteContract,
 } from "wagmi";
 import { formatEther, parseEther, parseEventLogs, type Address, type Hex } from "viem";
 import {
@@ -24,7 +21,11 @@ import {
   SEPOLIA_RPC,
   addresses,
 } from "@/config/networks";
-import { sendPopulatedWrite } from "@/lib/sepolia-write";
+import {
+  addWalletChain,
+  sendPopulatedWrite,
+  type WalletChain,
+} from "@/lib/sepolia-write";
 import {
   creditLineAbi,
   creditScoreAbi,
@@ -57,6 +58,22 @@ type ActiveLoan = {
 };
 
 const MAX_UINT256 = (1n << 256n) - 1n;
+
+const sepoliaWalletChain: WalletChain = {
+  id: SEPOLIA_CHAIN_ID,
+  name: "Sepolia",
+  nativeCurrency: { name: "Sepolia Ether", symbol: "ETH", decimals: 18 },
+  rpcUrls: [SEPOLIA_RPC],
+  blockExplorerUrls: [SEPOLIA_EXPLORER],
+};
+
+const creditcoinWalletChain: WalletChain = {
+  id: CREDITCOIN_CHAIN_ID,
+  name: "Creditcoin CC3 Testnet",
+  nativeCurrency: { name: "tCTC", symbol: "tCTC", decimals: 18 },
+  rpcUrls: [CREDITCOIN_RPC],
+  blockExplorerUrls: [CREDITCOIN_EXPLORER],
+};
 
 function parseLoanIdInput(value: string): bigint {
   const trimmed = value.trim();
@@ -149,10 +166,8 @@ function ActiveLoansSkeleton() {
 
 export function Desk() {
   const { address, isConnected, connector } = useAccount();
-  const chainId = useChainId();
-  const { switchChainAsync } = useSwitchChain();
-  const { writeContractAsync } = useWriteContract();
   const sepoliaClient = usePublicClient({ chainId: SEPOLIA_CHAIN_ID });
+  const creditcoinClient = usePublicClient({ chainId: CREDITCOIN_CHAIN_ID });
 
   const previousAddress = useRef<string | undefined>(undefined);
   useEffect(() => {
@@ -354,59 +369,25 @@ export function Desk() {
     [activeLoans],
   );
 
-  const ensureSepolia = useCallback(async () => {
-    if (chainId !== SEPOLIA_CHAIN_ID) {
-      await switchChainAsync({ chainId: SEPOLIA_CHAIN_ID });
-    }
-  }, [chainId, switchChainAsync]);
-
-  const ensureCreditcoin = useCallback(async () => {
-    if (chainId !== CREDITCOIN_CHAIN_ID) {
-      await switchChainAsync({ chainId: CREDITCOIN_CHAIN_ID });
-    }
-  }, [chainId, switchChainAsync]);
-
   const addNetworks = useCallback(async () => {
-    const provider = (await connector?.getProvider()) as
-      | { request?: (args: { method: string; params?: unknown[] }) => Promise<unknown> }
-      | undefined;
-    const request = provider?.request?.bind(provider) ?? window.ethereum?.request?.bind(window.ethereum);
-    if (!request) {
-      setStatus("No injected wallet found to add networks.");
-      return;
+    try {
+      const request = await selectedWalletRequest();
+      await addWalletChain(request, sepoliaWalletChain);
+      await addWalletChain(request, creditcoinWalletChain);
+      setStatus("Sepolia + Creditcoin CC3 added to the selected wallet.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : String(error));
     }
-    await request({
-      method: "wallet_addEthereumChain",
-      params: [
-        {
-          chainId: `0x${SEPOLIA_CHAIN_ID.toString(16)}`,
-          chainName: "Sepolia",
-          nativeCurrency: { name: "Sepolia Ether", symbol: "ETH", decimals: 18 },
-          rpcUrls: [SEPOLIA_RPC],
-          blockExplorerUrls: [SEPOLIA_EXPLORER],
-        },
-      ],
-    });
-    await request({
-      method: "wallet_addEthereumChain",
-      params: [
-        {
-          chainId: `0x${CREDITCOIN_CHAIN_ID.toString(16)}`,
-          chainName: "Creditcoin CC3 Testnet",
-          nativeCurrency: { name: "tCTC", symbol: "tCTC", decimals: 18 },
-          rpcUrls: [CREDITCOIN_RPC],
-          blockExplorerUrls: [CREDITCOIN_EXPLORER],
-        },
-      ],
-    });
-    setStatus("Sepolia + Creditcoin CC3 added to wallet.");
   }, [connector]);
 
   async function selectedWalletRequest() {
     const provider = (await connector?.getProvider()) as
       | { request?: (args: { method: string; params?: unknown[] }) => Promise<unknown> }
       | undefined;
-    return provider?.request?.bind(provider);
+    if (!provider?.request) {
+      throw new Error("Wallet connection is no longer available. Reconnect the selected wallet, then retry.");
+    }
+    return provider.request.bind(provider);
   }
 
   const updateProofProgress = useCallback((message: string) => {
@@ -435,6 +416,7 @@ export function Desk() {
     }
     setFaucetBusy(true);
     try {
+      if (!sepoliaClient) throw new Error("Sepolia RPC unavailable.");
       const request = await selectedWalletRequest();
       let nextFaucetAt: bigint | undefined;
       try {
@@ -463,24 +445,15 @@ export function Desk() {
       }
 
       setStatus("Confirm the mUSD faucet in Rabby or MetaMask.");
-      let hash: Hex;
-      try {
-        hash = await sendPopulatedWrite({
-          account: address,
-          address: addresses.sepoliaMockUsd as Address,
-          abi: mockUsdAbi,
-          functionName: "faucet",
-          chainId: SEPOLIA_CHAIN_ID,
-          request,
-        });
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        if (/Add Sepolia/i.test(msg)) {
-          setStatus("Adding Sepolia to the wallet. Confirm the network prompt.");
-          await addNetworks();
-        }
-        throw err;
-      }
+      const hash = await sendPopulatedWrite({
+        publicClient: sepoliaClient,
+        account: address,
+        address: addresses.sepoliaMockUsd as Address,
+        abi: mockUsdAbi,
+        functionName: "faucet",
+        chain: sepoliaWalletChain,
+        request,
+      });
 
       setFaucetTx(hash);
       setStatus("Waiting for Sepolia confirmation…");
@@ -518,7 +491,6 @@ export function Desk() {
   async function openLoan() {
     setOpenLoanBusy(true);
     try {
-      await ensureSepolia();
       if (!address) throw new Error("Connect wallet first.");
       if (!sepoliaClient) throw new Error("Sepolia RPC unavailable.");
       const principal = parseAmountInput(amount || "100", "Loan amount");
@@ -529,7 +501,7 @@ export function Desk() {
         abi: mockMarketAbi,
         functionName: "openLoan",
         functionArgs: [principal],
-        chainId: SEPOLIA_CHAIN_ID,
+        chain: sepoliaWalletChain,
         request: await selectedWalletRequest(),
       });
       setStatus("Waiting for loan confirmation on Sepolia…");
@@ -564,7 +536,6 @@ export function Desk() {
   async function repayLoan() {
     setRepayBusy(true);
     try {
-      await ensureSepolia();
       if (!address) throw new Error("Connect wallet first.");
       if (!sepoliaClient) throw new Error("Sepolia RPC unavailable.");
       const request = await selectedWalletRequest();
@@ -632,7 +603,7 @@ export function Desk() {
           abi: mockUsdAbi,
           functionName: "approve",
           functionArgs: [addresses.sepoliaMockMarket as Address, total],
-          chainId: SEPOLIA_CHAIN_ID,
+          chain: sepoliaWalletChain,
           request,
         });
         const approvalReceipt = await sepoliaClient.waitForTransactionReceipt({
@@ -656,7 +627,7 @@ export function Desk() {
           abi: mockMarketAbi,
           functionName: "repay",
           functionArgs: [loan.id, loan.value],
-          chainId: SEPOLIA_CHAIN_ID,
+          chain: sepoliaWalletChain,
           request,
         });
         const receipt = await sepoliaClient.waitForTransactionReceipt({
@@ -685,12 +656,15 @@ export function Desk() {
     setPhase("submitting");
     setStatus("Submit proveRepayment on Creditcoin (same wallet)…");
     setScoreBefore(score !== undefined ? score.toString() : "0");
-    await ensureCreditcoin();
-    const hash = await writeContractAsync({
+    if (!address) throw new Error("Connect wallet first.");
+    if (!creditcoinClient) throw new Error("Creditcoin RPC unavailable.");
+    const hash = await sendPopulatedWrite({
+      publicClient: creditcoinClient,
+      account: address,
       address: addresses.creditPassportAsc as Address,
       abi: passportAscAbi,
       functionName: "proveRepayment",
-      args: [
+      functionArgs: [
         BigInt(payload.chainKey),
         BigInt(payload.headerNumber),
         payload.txBytes,
@@ -698,9 +672,10 @@ export function Desk() {
         payload.siblings,
         payload.lowerEndpointDigest,
         payload.continuityRoots,
-        address ?? "0x0000000000000000000000000000000000000000",
+        address,
       ],
-      chainId: CREDITCOIN_CHAIN_ID,
+      chain: creditcoinWalletChain,
+      request: await selectedWalletRequest(),
     });
     setCreditTx(hash);
     await Promise.all([refetchScore(), refetchCap(), refetchToken()]);
@@ -810,7 +785,8 @@ export function Desk() {
 
   async function borrowOnCreditcoin() {
     try {
-      await ensureCreditcoin();
+      if (!address) throw new Error("Connect wallet first.");
+      if (!creditcoinClient) throw new Error("Creditcoin RPC unavailable.");
       const demoAmount = parseEther("10");
       if (lineBalance !== undefined && lineBalance < demoAmount) {
         setStatus(
@@ -819,12 +795,15 @@ export function Desk() {
         setPhase("error");
         return;
       }
-      const hash = await writeContractAsync({
+      const hash = await sendPopulatedWrite({
+        publicClient: creditcoinClient,
+        account: address,
         address: addresses.creditLine as Address,
         abi: creditLineAbi,
         functionName: "borrow",
-        args: [demoAmount],
-        chainId: CREDITCOIN_CHAIN_ID,
+        functionArgs: [demoAmount],
+        chain: creditcoinWalletChain,
+        request: await selectedWalletRequest(),
       });
       setBorrowTx(hash);
       setStatus(`Borrowed 10 mUSD on Creditcoin. Tx ${hash}`);

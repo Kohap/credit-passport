@@ -1,5 +1,6 @@
 import {
   encodeFunctionData,
+  formatEther,
   type Abi,
   type Address,
   type Hex,
@@ -10,20 +11,18 @@ function toHex(value: bigint | number): Hex {
   return `0x${BigInt(value).toString(16)}`;
 }
 
-type RequestFn = (args: {
+export type WalletRequest = (args: {
   method: string;
   params?: unknown[];
 }) => Promise<unknown>;
 
-function injectedRequest(): RequestFn {
-  const eth = (window as unknown as { ethereum?: { request: RequestFn } }).ethereum;
-  if (!eth?.request) {
-    throw new Error(
-      "No injected wallet. Open this desk in a browser with Rabby or MetaMask.",
-    );
-  }
-  return eth.request.bind(eth);
-}
+export type WalletChain = {
+  id: number;
+  name: string;
+  nativeCurrency: { name: string; symbol: string; decimals: number };
+  rpcUrls: readonly string[];
+  blockExplorerUrls?: readonly string[];
+};
 
 function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -41,17 +40,105 @@ function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promi
   });
 }
 
+function rpcErrorCode(error: unknown): number | undefined {
+  if (typeof error !== "object" || error === null || !("code" in error)) return undefined;
+  const code = (error as { code?: unknown }).code;
+  return typeof code === "number" ? code : undefined;
+}
+
+function errorText(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
+
+function walletError(error: unknown, network: WalletChain): Error {
+  const code = rpcErrorCode(error);
+  if (code === 4001) return new Error("Wallet request was rejected.");
+  if (code === -32002) {
+    return new Error("A wallet request is already open. Finish it in Rabby, then retry.");
+  }
+  const message = errorText(error);
+  if (/insufficient funds|insufficient balance/i.test(message)) {
+    return new Error(`Not enough ${network.nativeCurrency.symbol} for network gas. Fund this wallet, then retry.`);
+  }
+  return new Error(message);
+}
+
+export async function addWalletChain(request: WalletRequest, chain: WalletChain): Promise<void> {
+  await withTimeout(
+    request({
+      method: "wallet_addEthereumChain",
+      params: [
+        {
+          chainId: toHex(chain.id),
+          chainName: chain.name,
+          nativeCurrency: chain.nativeCurrency,
+          rpcUrls: [...chain.rpcUrls],
+          ...(chain.blockExplorerUrls?.length
+            ? { blockExplorerUrls: [...chain.blockExplorerUrls] }
+            : {}),
+        },
+      ],
+    }),
+    25_000,
+    `Wallet did not add ${chain.name}. Unlock Rabby, then retry.`,
+  );
+}
+
+async function switchWalletChain(request: WalletRequest, chain: WalletChain): Promise<void> {
+  try {
+    await withTimeout(
+      request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: toHex(chain.id) }],
+      }),
+      25_000,
+      `Wallet did not switch to ${chain.name}. Switch network in Rabby, then retry.`,
+    );
+  } catch (error) {
+    if (rpcErrorCode(error) !== 4902 && !/4902|Unrecognized chain|not added/i.test(errorText(error))) {
+      throw walletError(error, chain);
+    }
+    try {
+      await addWalletChain(request, chain);
+      await withTimeout(
+        request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: toHex(chain.id) }],
+        }),
+        25_000,
+        `Wallet did not switch to ${chain.name}. Switch network in Rabby, then retry.`,
+      );
+    } catch (addError) {
+      throw walletError(addError, chain);
+    }
+  }
+}
+
+async function assertSelectedAccount(request: WalletRequest, account: Address): Promise<void> {
+  const accounts = await withTimeout(
+    request({ method: "eth_accounts" }),
+    8_000,
+    "Wallet did not report the connected account. Unlock the selected wallet, then retry.",
+  );
+  if (
+    !Array.isArray(accounts) ||
+    !accounts.some((value) => typeof value === "string" && value.toLowerCase() === account.toLowerCase())
+  ) {
+    throw new Error("The selected wallet account changed. Reconnect the wallet, then retry.");
+  }
+}
+
 export async function sendPopulatedWrite(args: {
-  publicClient?: PublicClient;
+  publicClient: PublicClient;
   account: Address;
   abi: Abi;
   address: Address;
   functionName: string;
   functionArgs?: readonly unknown[];
-  chainId: number;
-  request?: RequestFn;
+  chain: WalletChain;
+  request: WalletRequest;
 }): Promise<Hex> {
-  const request = args.request ?? injectedRequest();
   const data = encodeFunctionData({
     abi: args.abi,
     functionName: args.functionName,
@@ -59,44 +146,67 @@ export async function sendPopulatedWrite(args: {
   } as never);
 
   const current = await withTimeout(
-    request({ method: "eth_chainId" }),
+    args.request({ method: "eth_chainId" }),
     8_000,
     "Wallet did not report a network. Unlock Rabby, then retry.",
   );
-  const currentId = Number(current);
-  if (currentId !== args.chainId) {
-    try {
-      await withTimeout(
-        request({
-          method: "wallet_switchEthereumChain",
-          params: [{ chainId: toHex(args.chainId) }],
-        }),
-        25_000,
-        "Wallet did not switch to Sepolia. Switch network in Rabby, then retry.",
-      );
-    } catch (err) {
-      const text = err instanceof Error ? err.message : String(err);
-      if (/4902|Unrecognized chain|not added/i.test(text)) {
-        throw new Error("Add Sepolia in the wallet, then retry Faucet mUSD.");
-      }
-      throw err;
-    }
+  if (Number(current) !== args.chain.id) {
+    await switchWalletChain(args.request, args.chain);
   }
 
-  const hash = await withTimeout(
-    request({
-      method: "eth_sendTransaction",
-      params: [
-        {
-          from: args.account,
-          to: args.address,
-          data,
-        },
-      ],
-    }),
-    120_000,
-    "Wallet did not confirm. Click Sign in Rabby (that submits the mint), then retry if it stays open.",
-  );
+  await assertSelectedAccount(args.request, args.account);
+
+  let gas: bigint;
+  try {
+    gas = await withTimeout(
+      args.publicClient.estimateGas({
+        account: args.account,
+        to: args.address,
+        data,
+      }),
+      15_000,
+      `Could not estimate gas on ${args.chain.name}. Check the action and retry.`,
+    );
+  } catch (error) {
+    throw walletError(error, args.chain);
+  }
+  const gasLimit = gas + gas / 5n;
+
+  try {
+    const [balance, gasPrice] = await Promise.all([
+      args.publicClient.getBalance({ address: args.account }),
+      args.publicClient.getGasPrice(),
+    ]);
+    if (balance < gasLimit * gasPrice) {
+      throw new Error(
+        `Not enough ${args.chain.nativeCurrency.symbol} for network gas. Need about ${formatEther(gasLimit * gasPrice)} ${args.chain.nativeCurrency.symbol}.`,
+      );
+    }
+  } catch (error) {
+    const message = errorText(error);
+    if (/Not enough .* for network gas/i.test(message)) throw error;
+  }
+
+  let hash: unknown;
+  try {
+    hash = await withTimeout(
+      args.request({
+        method: "eth_sendTransaction",
+        params: [
+          {
+            from: args.account,
+            to: args.address,
+            data,
+            gas: toHex(gasLimit),
+          },
+        ],
+      }),
+      120_000,
+      "Wallet did not confirm. Click Sign in Rabby (that submits the transaction), then retry if it stays open.",
+    );
+  } catch (error) {
+    throw walletError(error, args.chain);
+  }
 
   if (typeof hash !== "string" || !hash.startsWith("0x")) {
     throw new Error("Wallet did not return a transaction hash.");

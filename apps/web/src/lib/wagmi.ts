@@ -1,7 +1,6 @@
 "use client";
 
 import { createConfig } from "wagmi";
-import { injected } from "@wagmi/core";
 import { sepolia as sepoliaCatalog } from "wagmi/chains";
 import { fallback, http, type Chain } from "viem";
 import {
@@ -36,12 +35,13 @@ export const sepolia = {
 
 export const wagmiConfig = createConfig({
   chains: [sepolia, creditcoinTestnet],
-  connectors: [injected({ shimDisconnect: true })],
+  // Discover each injected wallet separately through EIP-6963. This keeps Rabby
+  // from being replaced by another extension through window.ethereum.
+  multiInjectedProviderDiscovery: true,
   transports: {
     [SEPOLIA_CHAIN_ID]: fallback(
       SEPOLIA_RPCS.map((url) => http(url, { timeout: 8_000, retryCount: 1 })),
     ),
     [CREDITCOIN_CHAIN_ID]: http(CREDITCOIN_RPC, { timeout: 20_000 }),
   },
-  ssr: true,
 });

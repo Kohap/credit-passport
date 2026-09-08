@@ -36,6 +36,24 @@ export default function DocsPage() {
         addresses, proof procedure, and verification evidence behind the demo.
       </p>
 
+      <section className="section" id="mcp">
+        <h2>MCP access</h2>
+        <p>
+          Assistants can read public Credit Passport and Agent Passport testnet records through
+          this read-only MCP endpoint. It never receives a private key, signs a message, or
+          submits a transaction. Wallet approvals remain in the connected wallet.
+        </p>
+        <pre className="docs-command"><code>https://www.creditpassport.xyz/api/mcp</code></pre>
+        <dl className="kv">
+          <dt>get_credit_passport</dt>
+          <dd>Read score, verified repayments, and demo credit availability for a wallet.</dd>
+          <dt>get_agent_passport</dt>
+          <dd>Read completed jobs and settled demo value for an agent wallet.</dd>
+          <dt>get_credit_passport_links</dt>
+          <dd>Return public app links and the deployed testnet contract addresses.</dd>
+        </dl>
+      </section>
+
       <section className="section">
         <h2>Networks</h2>
         <dl className="kv">

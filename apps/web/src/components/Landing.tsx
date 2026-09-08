@@ -58,49 +58,42 @@ function ThemeMark({ theme }: { theme: LandingTheme }) {
   );
 }
 
-const INSTRUMENTS = [
+const OUTCOMES = [
   {
-    title: "Passport",
-    body: "A personal credit record that stays with the wallet that earned it.",
+    title: "Keep the proof",
+    body: "Your verified repayment becomes a record linked to the wallet that earned it.",
   },
   {
-    title: "Progress",
-    body: "Each verified repayment strengthens your test credit record.",
+    title: "See your progress",
+    body: "A clear record shows what you have repaid and what you can try next.",
   },
   {
-    title: "Opportunity",
-    body: "A verified record can unlock a larger demo borrowing limit.",
+    title: "Carry it forward",
+    body: "The record is yours to share with a future credit experience or agent workflow.",
   },
 ] as const;
 
-const FAQ = [
+const STARTING_POINTS = [
   {
-    q: "What does Credit Passport issue?",
-    a: "A personal, non-transferable credit record, a repayment score, and a demo borrowing limit after a repayment is verified.",
+    number: "01",
+    title: "Try the credit demo",
+    body: "Borrow demo funds, repay them, then watch your record update.",
+    href: "/app",
+    action: "Start credit demo",
   },
   {
-    q: "Is this a bureau or a lender?",
-    a: "No. It is on-chain software. It does not collect KYC, does not report to a credit bureau, and does not extend fiat credit.",
+    number: "02",
+    title: "Understand the journey",
+    body: "See the simple path from a repayment to a portable credit record.",
+    href: "/dossier",
+    action: "See the journey",
   },
   {
-    q: "What is live, and what is a fixture?",
-    a: "The verification path is live on testnet. The current loan and currency are demos so you can safely try the full experience.",
-  },
-  {
-    q: "Who can change a score?",
-    a: "Only a verified repayment can update it. No person at Credit Passport manually approves a score.",
-  },
-  {
-    q: "What data is stored?",
-    a: "Wallet addresses, proofs, score, cap, and token id live on public testnets. Credit Passport does not collect names, emails, or off-chain identity.",
-  },
-  {
-    q: "Can the passport be transferred?",
-    a: "No. It is soulbound to the proving wallet.",
-  },
-  {
-    q: "Which networks?",
-    a: "The demo starts on Ethereum Sepolia and creates the record on Creditcoin CC3. Technical network details are in Docs.",
+    number: "03",
+    title: "Give an agent a record",
+    body: "Record client-approved work and give an agent a reputation it can carry.",
+    href: "/agent",
+    action: "Open Agent Passport",
   },
 ] as const;
 
@@ -163,8 +156,8 @@ export function Landing() {
           <Link href="/agent" className="landing-nav-strong" onClick={closeMenu}>
             Agent Passport
           </Link>
-          <a href="#developers" className="landing-nav-optional" onClick={closeMenu}>
-            Developers
+          <a href="#builders" className="landing-nav-optional" onClick={closeMenu}>
+            Builders
           </a>
           <a href="#legal" className="landing-nav-strong" onClick={closeMenu}>
             Legal
@@ -198,37 +191,59 @@ export function Landing() {
       <section className="landing-hero" aria-labelledby="landing-brand">
         <div className="landing-hero-visual" aria-hidden="true" />
         <div className="landing-hero-stage">
-          <p className="landing-brand" id="landing-brand">
-            Credit Passport
-          </p>
           <div className="landing-hero-aside">
+            <p className="landing-kicker" id="landing-brand">
+              Credit Passport <span>Testnet demo</span>
+            </p>
             <h1 className="landing-headline">
-              Turn a repaid loan into credit you can carry.
+              Credit history you can carry.
             </h1>
             <p className="landing-lede">
-              Repay a demo loan, verify it, and keep the credit record in your wallet.
+              Turn a repaid demo loan into a record that stays with your wallet, ready for the
+              next opportunity.
             </p>
             <div className="hero-actions">
               <Link href="/app" className="btn btn-primary landing-cta">
-                Try the credit demo
+                Start credit demo
               </Link>
               <Link href="/dossier" className="btn btn-ghost landing-cta">
                 See how it works
               </Link>
             </div>
           </div>
+          <aside className="landing-record" aria-label="Example Credit Passport record">
+            <div className="landing-record-topline">
+              <span>Your Passport</span>
+              <span>Ready to earn</span>
+            </div>
+            <p className="landing-record-title">A record of good follow-through.</p>
+            <dl className="landing-record-stats">
+              <div>
+                <dt>Repayments</dt>
+                <dd>0</dd>
+              </div>
+              <div>
+                <dt>Credit record</dt>
+                <dd>Waiting</dd>
+              </div>
+            </dl>
+            <p className="landing-record-note">
+              Complete the demo and this becomes a record you can keep in your wallet.
+            </p>
+          </aside>
         </div>
       </section>
 
       <main className="landing-main">
         <section className="landing-section landing-problem" id="product" aria-labelledby="product-title">
-          <h2 id="product-title">Credit should travel with the borrower</h2>
+          <p className="landing-eyebrow">A record with you</p>
+          <h2 id="product-title">Good repayment should not get left behind.</h2>
           <p>
-            A repayment should not disappear when you move between networks. Credit Passport
-            turns a verified repayment into a credit record that stays with your wallet.
+            Credit Passport gives your repayment a place to count. Complete a safe test demo,
+            verify it, and keep a credit record with the wallet that did the work.
           </p>
           <ul className="landing-list">
-            {INSTRUMENTS.map((item) => (
+            {OUTCOMES.map((item) => (
               <li key={item.title}>
                 <h3>{item.title}</h3>
                 <p>{item.body}</p>
@@ -237,32 +252,53 @@ export function Landing() {
           </ul>
         </section>
 
-        <section className="landing-section" aria-labelledby="how-title">
-          <h2 id="how-title">How it works</h2>
+        <section className="landing-section landing-start" aria-labelledby="start-title">
+          <div className="landing-section-intro">
+            <p className="landing-eyebrow">Start where you are</p>
+            <h2 id="start-title">One product, three clear ways in.</h2>
+          </div>
+          <div className="landing-routes">
+            {STARTING_POINTS.map((point) => (
+              <article key={point.title} className="landing-route">
+                <span>{point.number}</span>
+                <h3>{point.title}</h3>
+                <p>{point.body}</p>
+                <Link href={point.href}>{point.action}</Link>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="landing-section landing-how" aria-labelledby="how-title">
+          <p className="landing-eyebrow">The credit path</p>
+          <h2 id="how-title">A simple action. A lasting record.</h2>
           <ol className="landing-steps">
             <li>
-              <h3>Try a demo loan</h3>
-              <p>Get test funds, open a small demo loan, and repay it. No real money is involved.</p>
+              <h3>Repay a demo loan</h3>
+              <p>Use test funds only. There is no real money involved.</p>
             </li>
             <li>
-              <h3>Verify your repayment</h3>
-              <p>Credit Passport checks the repayment and adds it to your record.</p>
+              <h3>Let the repayment be checked</h3>
+              <p>The app confirms that the repayment happened before it updates your record.</p>
             </li>
             <li>
-              <h3>See your credit</h3>
-              <p>Your Passport and demo borrowing limit appear when verification is complete.</p>
+              <h3>Keep the record</h3>
+              <p>Your Passport appears in the wallet that made the repayment, ready for the next demo.</p>
             </li>
           </ol>
         </section>
 
-        <section className="landing-section" id="developers" aria-labelledby="developers-title">
-          <h2 id="developers-title">Built for builders</h2>
+        <section className="landing-section" id="builders" aria-labelledby="builders-title">
+          <p className="landing-eyebrow">For builders</p>
+          <h2 id="builders-title">Let an assistant read the record, not control the wallet.</h2>
           <p>
-            The contracts, testnet deployments, architecture, and integration guide are public.
-            Start with the documentation when you want to connect your own repayment source.
+            Credit Passport now has a read-only MCP endpoint. An assistant can inspect public
+            testnet records and guide someone to the right next screen, while wallet approvals
+            stay with the person who owns the wallet.
           </p>
           <p className="landing-links">
-            <Link href="/docs">Read the technical docs</Link>
+            <Link href="/docs#mcp">Read the MCP guide</Link>
+            <Link href="/agent">Open Agent Passport</Link>
             <a href={REPO} target="_blank" rel="noreferrer">
               View the source code
             </a>
@@ -270,31 +306,13 @@ export function Landing() {
         </section>
 
         <section className="landing-section" id="legal" aria-labelledby="legal-title">
-          <h2 id="legal-title">Legal</h2>
+          <p className="landing-eyebrow">Before you begin</p>
+          <h2 id="legal-title">A safe place to try the full flow.</h2>
           <p>
-            Credit Passport is software on public testnets. MockUSD has no market value.
-            Use of the desk is at your own risk and does not create a lending relationship.
+            Credit Passport is a public testnet demo. Its demo funds have no market value, it
+            does not provide real-world credit, and you remain in control of your wallet.
           </p>
-          <div className="landing-faq">
-            {FAQ.map((item) => (
-              <details key={item.q}>
-                <summary>{item.q}</summary>
-                <p>{item.a}</p>
-              </details>
-            ))}
-          </div>
-          <div className="landing-legal-note">
-            <p>
-              Not an offer of credit, a security, or investment advice. No warranty, express
-              or implied. Figures on the desk are testnet records. Review the published
-              contracts before relying on any score, cap, or passport.
-            </p>
-            <p>
-              On-chain activity is public. Connecting a wallet reveals that address to the
-              network and to the desk interface. We do not sell personal data because we
-              do not collect it off-chain.
-            </p>
-          </div>
+          <Link href="/docs" className="landing-inline-link">Read the demo and privacy details</Link>
         </section>
       </main>
 
@@ -303,7 +321,7 @@ export function Landing() {
         <div className="landing-close-copy">
           <h2 id="close-title">Turn repayment into opportunity</h2>
           <p>
-            See how a verified repayment can become a portable credit record.
+            Start a simple demo and see a repayment become a record you keep.
           </p>
           <Link href="/app" className="btn btn-primary landing-cta">
             Start the demo
@@ -316,7 +334,7 @@ export function Landing() {
           <p>Credit Passport · Creditcoin CC3</p>
           <p className="landing-footer-links">
             <a href="#product">Product</a>
-            <a href="#developers">Developers</a>
+            <a href="#builders">Builders</a>
             <a href="#legal">Legal</a>
             <Link href="/docs">Docs</Link>
           </p>

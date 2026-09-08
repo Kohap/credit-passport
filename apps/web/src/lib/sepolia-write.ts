@@ -55,7 +55,7 @@ function walletError(error: unknown, network: WalletChain): Error {
   const code = rpcErrorCode(error);
   if (code === 4001) return new Error("Wallet request was rejected.");
   if (code === -32002) {
-    return new Error("A wallet request is already open. Finish it in Rabby, then retry.");
+    return new Error("A wallet request is already open. Finish it in the wallet, then retry.");
   }
   const message = errorText(error);
   if (/insufficient funds|insufficient balance/i.test(message)) {
@@ -81,7 +81,7 @@ export async function addWalletChain(request: WalletRequest, chain: WalletChain)
       ],
     }),
     25_000,
-    `Wallet did not add ${chain.name}. Unlock Rabby, then retry.`,
+    `Wallet did not add ${chain.name}. Unlock the selected wallet, then retry.`,
   );
 }
 
@@ -93,7 +93,7 @@ async function switchWalletChain(request: WalletRequest, chain: WalletChain): Pr
         params: [{ chainId: toHex(chain.id) }],
       }),
       25_000,
-      `Wallet did not switch to ${chain.name}. Switch network in Rabby, then retry.`,
+      `Wallet did not switch to ${chain.name}. Switch network in the selected wallet, then retry.`,
     );
   } catch (error) {
     if (rpcErrorCode(error) !== 4902 && !/4902|Unrecognized chain|not added/i.test(errorText(error))) {
@@ -107,7 +107,7 @@ async function switchWalletChain(request: WalletRequest, chain: WalletChain): Pr
           params: [{ chainId: toHex(chain.id) }],
         }),
         25_000,
-        `Wallet did not switch to ${chain.name}. Switch network in Rabby, then retry.`,
+        `Wallet did not switch to ${chain.name}. Switch network in the selected wallet, then retry.`,
       );
     } catch (addError) {
       throw walletError(addError, chain);
@@ -148,7 +148,7 @@ export async function sendPopulatedWrite(args: {
   const current = await withTimeout(
     args.request({ method: "eth_chainId" }),
     8_000,
-    "Wallet did not report a network. Unlock Rabby, then retry.",
+    "Wallet did not report a network. Unlock the selected wallet, then retry.",
   );
   if (Number(current) !== args.chain.id) {
     await switchWalletChain(args.request, args.chain);
@@ -202,7 +202,7 @@ export async function sendPopulatedWrite(args: {
         ],
       }),
       120_000,
-      "Wallet did not confirm. Click Sign in Rabby (that submits the transaction), then retry if it stays open.",
+      "Wallet did not confirm. Click Sign in the selected wallet (that submits the transaction), then retry if it stays open.",
     );
   } catch (error) {
     throw walletError(error, args.chain);

@@ -78,6 +78,16 @@ const nextConfig: NextConfig = {
     : {}),
   ...(!isGithubPages
     ? {
+        async redirects() {
+          return [
+            {
+              source: "/:path*",
+              has: [{ type: "host", value: "web-mauve-five-21.vercel.app" }],
+              destination: "https://www.creditpassport.xyz/:path*",
+              permanent: true,
+            },
+          ];
+        },
         async rewrites() {
           return [
             {

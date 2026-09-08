@@ -6,7 +6,7 @@ export const SEPOLIA_EXPLORER = "https://sepolia.etherscan.io";
 export const CREDITCOIN_EXPLORER = "https://creditcoin-testnet.blockscout.com";
 export const ATTESTOR_DASHBOARD = "https://dashboard.cc3-testnet.creditcoin.network";
 /** Public demo URLs. */
-export const DESK_URL = "https://web-mauve-five-21.vercel.app/";
+export const DESK_URL = "https://www.creditpassport.xyz/";
 export const PAGES_URL = "https://kohap.github.io/credit-passport/";
 export const ASC_DEFAULT = "0xc5c9B5A4842B20D945aAD6824A58Afdbb78fecbb";
 

@@ -75,6 +75,37 @@ function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promi
   });
 }
 
+const PROOF_STORAGE_PREFIX = "credit-passport:proof-state:v1";
+
+function proofStorageKey(address: Address) {
+  return `${PROOF_STORAGE_PREFIX}:${address.toLowerCase()}`;
+}
+
+function isTransactionHash(value: unknown): value is Hex {
+  return typeof value === "string" && /^0x[0-9a-fA-F]{64}$/.test(value);
+}
+
+function restoreProofState(address: Address) {
+  const raw = window.localStorage.getItem(proofStorageKey(address));
+  if (!raw) return { repayTx: undefined, proof: null };
+
+  try {
+    const saved = JSON.parse(raw) as { repayTx?: unknown; proof?: unknown };
+    const repayTx = isTransactionHash(saved.repayTx) ? saved.repayTx : undefined;
+    if (!repayTx || !saved.proof) return { repayTx, proof: null };
+    return { repayTx, proof: parsePastableProof(JSON.stringify(saved.proof), repayTx) };
+  } catch {
+    return { repayTx: undefined, proof: null };
+  }
+}
+
+function formatAttestationEstimate(remainingBlocks: number) {
+  if (remainingBlocks <= 0) return "ready now";
+  const seconds = remainingBlocks * 12;
+  if (seconds < 60) return `about ${seconds}s`;
+  return `about ${Math.ceil(seconds / 60)} min`;
+}
+
 export function Desk() {
   const { address, isConnected, connector } = useAccount();
   const chainId = useChainId();
@@ -84,7 +115,10 @@ export function Desk() {
 
   const previousAddress = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (previousAddress.current && previousAddress.current !== address) {
+    const walletChanged = previousAddress.current !== address;
+    setPersistedForAddress(undefined);
+
+    if (previousAddress.current && walletChanged) {
       setFaucetTx(undefined);
       setRepayTx(undefined);
       setCreditTx(undefined);
@@ -98,6 +132,22 @@ export function Desk() {
           : "Wallet disconnected.",
       );
     }
+
+    if (address) {
+      const restored = restoreProofState(address);
+      if (restored.repayTx) {
+        setRepayTx(restored.repayTx);
+        setProof(restored.proof);
+        if (restored.proof) {
+          setPhase("proof_ready");
+          setStatus("Restored a ready repayment proof. Submit it on Creditcoin when ready.");
+        } else {
+          setPhase("waiting_source");
+          setStatus("Restored repayment. Resuming proof preparation…");
+        }
+      }
+      setPersistedForAddress(address.toLowerCase());
+    }
     previousAddress.current = address;
   }, [address]);
 
@@ -110,6 +160,7 @@ export function Desk() {
     "Connect the same wallet on Sepolia and Creditcoin CC3.",
   );
   const [proof, setProof] = useState<ProofPayload | null>(null);
+  const [persistedForAddress, setPersistedForAddress] = useState<string>();
   const [creditTx, setCreditTx] = useState<Hex | undefined>();
   const [borrowTx, setBorrowTx] = useState<Hex | undefined>();
   const [scoreBefore, setScoreBefore] = useState<string | null>(null);
@@ -131,6 +182,20 @@ export function Desk() {
 
   const sepoliaReady = isConfigured(addresses.sepoliaMockMarket);
   const creditReady = isConfigured(addresses.creditPassportAsc);
+
+  useEffect(() => {
+    if (!address || persistedForAddress !== address.toLowerCase()) return;
+
+    const key = proofStorageKey(address);
+    if (!repayTx) {
+      window.localStorage.removeItem(key);
+      return;
+    }
+    window.localStorage.setItem(
+      key,
+      JSON.stringify({ repayTx, proof, savedAt: Date.now() }),
+    );
+  }, [address, persistedForAddress, proof, repayTx]);
 
   const { data: musd, refetch: refetchMusd } = useReadContract({
     address: addresses.sepoliaMockUsd as Address,
@@ -299,6 +364,14 @@ export function Desk() {
       setPhase("waiting_attestation");
     } else if (/proof|prover|retry|indexing/i.test(message)) {
       setPhase("generating_proof");
+    }
+    const height = /proof service has (\d+); repayment is in (\d+)/i.exec(message);
+    if (height) {
+      const remainingBlocks = Math.max(0, Number(height[2]) - Number(height[1]));
+      setStatus(
+        `Waiting for Attestcoin: ${remainingBlocks} block${remainingBlocks === 1 ? "" : "s"} remaining (${formatAttestationEstimate(remainingBlocks)}).`,
+      );
+      return;
     }
     setStatus(message);
   }, []);

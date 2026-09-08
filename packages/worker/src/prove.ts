@@ -17,7 +17,7 @@ import {
 import { chainInfo, proofProvider } from "@gluwa/usc-sdk";
 import { loadEnv } from "./env.js";
 
-const ASC_DEFAULT = "0xc5c9B5A4842B20D945aAD6824A58Afdbb78fecbb";
+const ASC_DEFAULT = "0x5123CdFd395414FcB6c5b8bc10A0843882EfD277";
 const PROVER_FALLBACK = "https://proof-gen-api.cc3-testnet.creditcoin.network";
 const SEPOLIA_EXPLORER = "https://sepolia.etherscan.io";
 const CREDITCOIN_EXPLORER = "https://creditcoin-testnet.blockscout.com";

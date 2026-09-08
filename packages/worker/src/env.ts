@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const ASC_DEFAULT = "0xc5c9B5A4842B20D945aAD6824A58Afdbb78fecbb";
+const ASC_DEFAULT = "0x5123CdFd395414FcB6c5b8bc10A0843882EfD277";
 
 /** Empty / whitespace env values → undefined so Zod defaults apply. */
 function emptyToUndef(v: unknown): unknown {

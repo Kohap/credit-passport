@@ -745,6 +745,91 @@ textarea.input {
   font-size: 0.86rem;
 }
 
+/* —— Agent Passport —— */
+.agent-desk {
+  padding-bottom: 6rem;
+}
+
+.agent-flow {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.agent-record {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin: 1rem 0 0;
+}
+
+.agent-record > div,
+.agent-job-summary {
+  min-width: 0;
+  padding: 0.85rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.agent-record dt {
+  color: var(--mute);
+  font-size: 0.78rem;
+}
+
+.agent-record dd {
+  margin: 0.22rem 0 0;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.agent-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.agent-text-field {
+  grid-column: 1 / -1;
+}
+
+.agent-input,
+.agent-tx-input {
+  max-width: none;
+}
+
+.agent-tx-input {
+  font-size: 0.8rem;
+}
+
+.agent-job-field {
+  grid-template-columns: minmax(0, 14rem) auto;
+  align-items: end;
+}
+
+.agent-refresh {
+  align-self: end;
+}
+
+.agent-job-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.9rem;
+  align-items: center;
+  margin-top: 0.85rem;
+  color: var(--mute);
+  font-size: 0.88rem;
+}
+
+.agent-job-summary strong {
+  color: var(--ink);
+}
+
+.agent-actions {
+  margin-top: 1rem;
+}
+
 .alert {
   padding: 1rem 0;
   border-top: 1px solid var(--bad);
@@ -1333,6 +1418,23 @@ a.btn {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.45rem;
     margin-bottom: 1.25rem;
+  }
+
+  .agent-flow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .agent-record,
+  .agent-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .agent-job-field {
+    grid-template-columns: 1fr;
+  }
+
+  .agent-refresh {
+    justify-self: start;
   }
 
   .rail-step {

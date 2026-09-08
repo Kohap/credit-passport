@@ -178,6 +178,9 @@ export function Landing() {
           <a href="#product" className="landing-nav-strong" onClick={closeMenu}>
             Product
           </a>
+          <Link href="/agent" className="landing-nav-strong" onClick={closeMenu}>
+            Agent Passport
+          </Link>
           <a href="#developers" className="landing-nav-optional" onClick={closeMenu}>
             Developers
           </a>

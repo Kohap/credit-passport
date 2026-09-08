@@ -218,3 +218,142 @@ export const passportNftAbi = [
     outputs: [{ type: "uint256" }],
   },
 ] as const;
+
+export const agentJobEscrowAbi = [
+  {
+    type: "function",
+    name: "createJob",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "agent", type: "address" },
+      { name: "amount", type: "uint256" },
+      { name: "briefHash", type: "bytes32" },
+    ],
+    outputs: [{ name: "jobId", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "submitWork",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "jobId", type: "uint256" },
+      { name: "resultHash", type: "bytes32" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "approveCompletion",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "jobId", type: "uint256" }],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "cancelBeforeSubmission",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "jobId", type: "uint256" }],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "jobs",
+    stateMutability: "view",
+    inputs: [{ name: "jobId", type: "uint256" }],
+    outputs: [
+      { name: "client", type: "address" },
+      { name: "agent", type: "address" },
+      { name: "amount", type: "uint256" },
+      { name: "briefHash", type: "bytes32" },
+      { name: "resultHash", type: "bytes32" },
+      { name: "state", type: "uint8" },
+    ],
+  },
+  {
+    type: "event",
+    name: "JobFunded",
+    inputs: [
+      { name: "client", type: "address", indexed: true },
+      { name: "agent", type: "address", indexed: true },
+      { name: "jobId", type: "uint256", indexed: true },
+      { name: "amount", type: "uint256", indexed: false },
+      { name: "briefHash", type: "bytes32", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "JobCompleted",
+    inputs: [
+      { name: "agent", type: "address", indexed: true },
+      { name: "client", type: "address", indexed: true },
+      { name: "jobId", type: "uint256", indexed: true },
+      { name: "amount", type: "uint256", indexed: false },
+      { name: "resultHash", type: "bytes32", indexed: false },
+      { name: "timestamp", type: "uint64", indexed: false },
+    ],
+  },
+] as const;
+
+export const agentPassportAscAbi = [
+  {
+    type: "function",
+    name: "proveJobCompletion",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "chainKey", type: "uint64" },
+      { name: "blockHeight", type: "uint64" },
+      { name: "encodedTransaction", type: "bytes" },
+      { name: "merkleRoot", type: "bytes32" },
+      {
+        name: "siblings",
+        type: "tuple[]",
+        components: [
+          { name: "hash", type: "bytes32" },
+          { name: "isLeft", type: "bool" },
+        ],
+      },
+      { name: "lowerEndpointDigest", type: "bytes32" },
+      { name: "continuityRoots", type: "bytes32[]" },
+      { name: "claimAgent", type: "address" },
+    ],
+    outputs: [{ type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "completedJobsOf",
+    stateMutability: "view",
+    inputs: [{ name: "agent", type: "address" }],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "settledVolumeOf",
+    stateMutability: "view",
+    inputs: [{ name: "agent", type: "address" }],
+    outputs: [{ type: "uint256" }],
+  },
+] as const;
+
+export const agentPassportNftAbi = [
+  {
+    type: "function",
+    name: "tokenOf",
+    stateMutability: "view",
+    inputs: [{ name: "agent", type: "address" }],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "completedJobsOfToken",
+    stateMutability: "view",
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "settledVolumeOfToken",
+    stateMutability: "view",
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    outputs: [{ type: "uint256" }],
+  },
+] as const;

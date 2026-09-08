@@ -109,6 +109,18 @@ export const addresses = {
     process.env.NEXT_PUBLIC_CREDITCOIN_MOCK_USD,
     "0x3937cFf0385AF9aAA25212432f030Ddbb1B98798",
   ),
+  sepoliaAgentJobEscrow: publicAddress(
+    process.env.NEXT_PUBLIC_SEPOLIA_AGENT_JOB_ESCROW,
+    "0x294400Ddd3F6E11F04d0e16416cc677Dc134a2E1",
+  ),
+  agentPassportNft: publicAddress(
+    process.env.NEXT_PUBLIC_CREDITCOIN_AGENT_PASSPORT_NFT,
+    "0x7c052F21153352bf326Ed3fDecC678fEFB177284",
+  ),
+  agentPassportAsc: publicAddress(
+    process.env.NEXT_PUBLIC_CREDITCOIN_AGENT_PASSPORT_ASC,
+    "0x965bdfEcD8ac53885d1d899E99814Af2752E16C8",
+  ),
 } as const;
 
 export const SCORE_FORMULA = [

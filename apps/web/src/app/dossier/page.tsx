@@ -16,7 +16,11 @@ const SECTIONS = [
   },
   {
     title: "Signal on Sepolia. Standing on Creditcoin.",
-    body: "ProofBuilder returns Merkle + continuity. CreditPassportASC is the only writer of score, cap, and NFT. Next source is a live lending-pool repay event \u2014 not this MockMarket fixture.",
+    body: "ProofBuilder returns Merkle + continuity. CreditPassportASC is the only writer of score, cap, and NFT. The verified v2 repayment is live; the source remains a MockMarket fixture.",
+  },
+  {
+    title: "Execution history for agents uses the same primitive.",
+    body: "A distinct client wallet funded and approved a Sepolia job escrow. Attestcoin proved the payment release on Creditcoin, where Agent Passport #1 now records one completed job and 1 mUSD settled volume.",
   },
 ];
 

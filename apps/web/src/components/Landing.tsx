@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 
 const PRECOMPILE = "0x0000000000000000000000000000000000000FD2";
 const ASC = "0xc5c9B5A4842B20D945aAD6824A58Afdbb78fecbb";
@@ -153,6 +153,20 @@ function useLandingTheme() {
 
 export function Landing() {
   const { theme, toggle } = useLandingTheme();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setMenuOpen(false);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  function closeMenu() {
+    setMenuOpen(false);
+  }
+
   return (
     <div className="landing" data-theme={theme}>
       <header className="landing-nav">
@@ -160,19 +174,21 @@ export function Landing() {
           <StampMark />
           Credit Passport
         </Link>
-        <nav className="landing-nav-links" aria-label="Primary">
-          <a href="#product" className="landing-nav-strong">
+        <nav className="landing-nav-links" id="landing-primary-menu" data-open={menuOpen} aria-label="Primary">
+          <a href="#product" className="landing-nav-strong" onClick={closeMenu}>
             Product
           </a>
-          <a href="#developers" className="landing-nav-optional">
+          <a href="#developers" className="landing-nav-optional" onClick={closeMenu}>
             Developers
           </a>
-          <a href="#legal" className="landing-nav-strong">
+          <a href="#legal" className="landing-nav-strong" onClick={closeMenu}>
             Legal
           </a>
-          <Link href="/app" className="landing-nav-strong">
+          <Link href="/app" className="landing-nav-strong" onClick={closeMenu}>
             Open Desk
           </Link>
+        </nav>
+        <div className="landing-nav-actions">
           <button
             type="button"
             className="landing-theme"
@@ -182,7 +198,16 @@ export function Landing() {
           >
             <ThemeMark theme={theme} />
           </button>
-        </nav>
+          <button
+            type="button"
+            className="landing-menu-toggle"
+            aria-expanded={menuOpen}
+            aria-controls="landing-primary-menu"
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            {menuOpen ? "Close" : "Menu"}
+          </button>
+        </div>
       </header>
 
       <section className="landing-hero" aria-labelledby="landing-brand">

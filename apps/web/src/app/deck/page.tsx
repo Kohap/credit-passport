@@ -31,13 +31,18 @@ const SLIDES = [
   },
   {
     kicker: "The record",
-    title: "Already run. Score 50. Passport #1. Cap 200 mUSD.",
-    body: "One EOA on Sepolia and Creditcoin. First closed loan, live on CC3 testnet.",
+    title: "Already run. PASS #1 and a live v2 proof.",
+    body: "Sepolia LoanRepaid became score, cap, and a soulbound credential on Creditcoin CC3 through Attestcoin.",
+  },
+  {
+    kicker: "The extension",
+    title: "The same proof now records completed agent work.",
+    body: "A distinct client funded and approved a 1 mUSD escrowed job. Attestcoin verified its release; Agent Passport #1 records the completed job.",
   },
   {
     kicker: "The product",
-    title: "The desk is the product.",
-    body: "Replay the recorded proof, or connect the same wallet and run the path yourself.",
+    title: "One verifier, two forms of standing.",
+    body: "Credit history and agent execution history become portable, onchain credentials without trusting an indexer.",
   },
 ] as const;
 

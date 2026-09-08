@@ -61,6 +61,41 @@ export default function DocsPage() {
       </section>
 
       <section className="section">
+        <h2>Verified proofs</h2>
+        <dl className="kv">
+          <dt>v2 repayment</dt>
+          <dd>
+            <a href="https://creditcoin-testnet.blockscout.com/tx/0x1f075244b34a295d176774ac5a7851fcde0306438584b249c04877bf3578072d" target="_blank" rel="noreferrer">
+              proveRepayment on Creditcoin
+            </a>
+          </dd>
+          <dt>agent completion</dt>
+          <dd>
+            <a href="https://creditcoin-testnet.blockscout.com/tx/0x9a0472dce66776f08df3c80a57d52fae22f000328d861412b841628f68dbc8bc" target="_blank" rel="noreferrer">
+              proveJobCompletion on Creditcoin
+            </a>
+          </dd>
+        </dl>
+      </section>
+
+      <section className="section">
+        <h2>Agent Passport alpha</h2>
+        <p>
+          A distinct client funds an escrowed job, the agent commits a result hash, and the client releases payment. The agent then proves that
+          <span className="mono"> JobCompleted </span>
+          event through Attestcoin to mint or update a soulbound Agent Passport.
+        </p>
+        <dl className="kv">
+          <dt>Sepolia escrow</dt>
+          <dd>0x294400Ddd3F6E11F04d0e16416cc677Dc134a2E1</dd>
+          <dt>Creditcoin Agent ASC</dt>
+          <dd>0x965bdfEcD8ac53885d1d899E99814Af2752E16C8</dd>
+          <dt>first credential</dt>
+          <dd>Agent Passport #1, one completed job, 1 mUSD settled</dd>
+        </dl>
+      </section>
+
+      <section className="section">
         <h2>Contracts</h2>
         <dl className="kv">
           <dt>MockUSD</dt>

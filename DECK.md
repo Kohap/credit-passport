@@ -1,67 +1,62 @@
-# Credit Passport — 7 slides (speaker notes)
+# Credit Passport - 7 slides (speaker notes)
 
-Paste into Gamma / Google slides. Speak from the notes under each slide.
-
----
-
-## Slide 1 — Title (first 15s: name the mock)
-
-**Credit Passport**  
-MockMarket on Sepolia → Attestcoin verify → score / cap / Passport on Creditcoin.
-
-**Notes:** BUIDL CTC 2026 · DeFi / Attestcoin. Say immediately: “MockMarket is the source fixture. The Attestcoin path is real. Next source is a live Sepolia lending-pool repay event.” One MetaMask EOA on both chains. Live desk: https://web-mauve-five-21.vercel.app/app (Connect wallet). Landing: https://web-mauve-five-21.vercel.app/. Do not submit a 404 as the demo video.
+Paste into Gamma or Google Slides. Every transaction below is live on public testnets.
 
 ---
 
-## Slide 2 — Problem
+## Slide 1 - Credit Passport
 
-Cross-chain credit today trusts bridges, oracles, or backends.  
-A repayment on Ethereum is invisible to Creditcoin unless someone can lie.
+**Attestcoin-verified credit and execution history.**
 
-**Notes:** Judges score Attestcoin depth. We refuse “indexer says repaid.” Destination chain must verify the foreign tx itself.
+Sepolia event -> Attestcoin proof -> Creditcoin credential.
 
----
-
-## Slide 3 — Insight (must-say: 0xFD2 + receiptStatus)
-
-Attestcoin lets Creditcoin contracts **read** foreign-chain txs with Merkle + continuity proofs.  
-Verification and business logic run in **one** Creditcoin transaction.
-
-**Notes:** Precompile **`0x0000000000000000000000000000000000000FD2`** (`verifyAndEmit`). ASC requires **`receiptStatus == 1`** (precompile does not check success). Also: emitter == Sepolia MockMarket, borrower match, replay via query id. If a judge cannot open a live `proveRepayment` tx, you did not integrate Attestcoin.
+**Notes:** Credit Passport is live at https://www.creditpassport.xyz/app. The loan source is a Sepolia MockMarket fixture; the Attestcoin verification, Creditcoin writes, and credentials are real. Start with the verified result, then show the loop.
 
 ---
 
-## Slide 4 — 90s loop (prize first)
+## Slide 2 - The problem
 
-1. Same wallet: faucet → open → repay on Sepolia MockMarket  
-2. Wait until height attested  
-3. `npm run prove -- <tx> --submit` (CLI = source of truth; Pages optional)  
-4. Score ↑, borrow cap ↑, soulbound PASS minted  
-5. If CreditLine funded: borrow 10 mUSD — else skip and say “cap + passport”
+A repayment or completed agent job on Ethereum is invisible to Creditcoin unless a bridge, oracle, or backend asserts that it happened.
 
-**Notes:** chainKey `1` = Sepolia on CC3 (≠ chainId `11155111`). Record the first successful prove the hour it happens.
+**Notes:** We do not accept “an indexer says it happened.” A destination-chain contract should verify the foreign transaction receipt and expected event itself.
 
 ---
 
-## Slide 5 — Why this track
+## Slide 3 - The primitive
 
-Depth of Attestcoin use is the score.  
-We do **not** mock `verifyAndEmit`. We do **not** use Chainlink/Pyth as truth.
+Attestcoin supplies Merkle inclusion and continuity proofs. `verifyAndEmit` at `0x0000000000000000000000000000000000000FD2` verifies them on Creditcoin.
 
-**Notes:** Live ASC: `0xc5c9B5A4842B20D945aAD6824A58Afdbb78fecbb`. Show both explorer URLs from the HACKATHON PROOF block. Win the loop this week; CEIP is the post-place story.
-
----
-
-## Slide 6 — Architecture + one CREATE footnote
-
-Sepolia MockMarket (signal) → ProofBuilder CLI/UI → Creditcoin ASC (value).
-
-**Notes:** Footnote once: “Same CREATE hex on two chains = nonce coincidence. Different networks.” Then ignore. Static Pages cannot host a Node prover — CORS → CLI Plan B. Freeze: no extra chains, AI, mainnet, writability, new scoring, token, Telegram, redesign.
+**Notes:** Both ASCs require `receiptStatus == 1`, enforce the trusted Sepolia event emitter, bind the caller to the event subject, and deduplicate proofs. The precompile verifies inclusion; the ASC applies product-specific policy.
 
 ---
 
-## Slide 7 — Ask (after proof links exist)
+## Slide 4 - Credit Passport, proven
 
-Ask: Attestcoin depth now; next = replace MockMarket with Aave/Compound-style repay events (do not build that this week).
+Sepolia `LoanRepaid` -> Creditcoin `proveRepayment` -> score, borrow cap, soulbound PASS.
 
-**Notes:** Demo URL only if Connect Wallet loads. Prototype video = successful CLI (or Desk) loop + explorer tabs. Limitations: readability only, attestation lag, mocks.
+**Notes:** Live v2 proof: Sepolia [`0xac0843...228966`](https://sepolia.etherscan.io/tx/0xac0843bedc162ac75dee414dcf25a680a8a2dd8b66f7f7d4ffd07c4421228966), Creditcoin [`0x1f0752...78072d`](https://creditcoin-testnet.blockscout.com/tx/0x1f075244b34a295d176774ac5a7851fcde0306438584b249c04877bf3578072d), PASS `#1`. The live hardened ASC is `0x5123CdFd395414FcB6c5b8bc10A0843882EfD277`.
+
+---
+
+## Slide 5 - Agent Passport, proven
+
+Client-funded job escrow -> agent commits result hash -> client releases payment -> Attestcoin proof -> soulbound Agent Passport.
+
+**Notes:** A distinct ephemeral client wallet funded and approved the job; the agent wallet could not self-fund it. Live proof: Sepolia [`0x81744a...e64131`](https://sepolia.etherscan.io/tx/0x81744af17cdf623d839e2b6514d77f5fa00bb2e2101569f82128033cc3e64131), Creditcoin [`0x9a0472...dbc8bc`](https://creditcoin-testnet.blockscout.com/tx/0x9a0472dce66776f08df3c80a57d52fae22f000328d861412b841628f68dbc8bc). Agent Passport `#1` records one completed job and `1 mUSD` settled volume.
+
+---
+
+## Slide 6 - What the contracts actually guarantee
+
+The source event must come from the trusted contract. The proof must be unique. The caller must be the credited wallet.
+
+**Notes:** Agent escrow prevents one-wallet self-funding, releases only after client approval, and stores only a result commitment hash. It does not solve multi-wallet Sybil behavior or disputes; those are explicit next-stage policy problems, not claims we make today.
+
+---
+
+## Slide 7 - Live demo and next step
+
+**Open the desk:** https://www.creditpassport.xyz/app
+**Read the proof records:** https://github.com/Kohap/credit-passport
+
+**Notes:** Demo the human-credit loop first. Then show the Agent Passport explorer links as the extension: the same Attestcoin mechanism validates economically settled execution, not merely claims. Next source integrations are real lending-pool repayments and agent identity or dispute policy, not a new verifier design.

@@ -6,43 +6,43 @@ import { useCallback, useEffect, useState } from "react";
 const SLIDES = [
   {
     kicker: "Credit Passport",
-    title: "Credit that does not wait on an oracle.",
-    body: "A repayment on Ethereum becomes standing on Creditcoin — verified, written, and held.",
+    title: "Credit that moves with you.",
+    body: "A verified repayment becomes a credit record you can keep using across networks.",
   },
   {
     kicker: "The problem",
-    title: "A repayment on Ethereum is invisible to Creditcoin unless someone is allowed to lie.",
-    body: "Bridges, oracles, and indexers sit in the middle. Credit Passport refuses “indexer says repaid.”",
+    title: "Good repayment history gets left behind.",
+    body: "Today, paying a loan on one network does not automatically help you on another.",
   },
   {
     kicker: "The check",
-    title: "Attestcoin reads the foreign transaction itself.",
-    body: "verifyAndEmit at 0xFD2 must return true. Receipt must succeed. Emitter must be our MockMarket.",
+    title: "Your repayment is checked before it counts.",
+    body: "Credit Passport verifies that the payment really happened instead of relying on a manual approval.",
   },
   {
-    kicker: "The write",
-    title: "Score, passport, and borrow cap share one transaction.",
-    body: "No second operator. No delayed mint. The soulbound PASS is the underwriting record.",
+    kicker: "The result",
+    title: "One repayment can update your record.",
+    body: "When verification completes, your score, Passport, and demo borrowing limit update together.",
   },
   {
     kicker: "The path",
-    title: "Repay. Attest. Prove.",
-    body: "Sepolia MockMarket emits LoanRepaid. Wait until the height is attested. Submit on Creditcoin CC3.",
+    title: "Try a loan. Repay it. Verify it.",
+    body: "The demo uses test funds and guides you through every step with the same wallet.",
   },
   {
     kicker: "The record",
-    title: "Already run. PASS #1 and a live v2 proof.",
-    body: "Sepolia LoanRepaid became score, cap, and a soulbound credential on Creditcoin CC3 through Attestcoin.",
+    title: "The full path has already been proven live.",
+    body: "A demo repayment has created a Credit Passport and a new demo borrowing limit on testnet.",
   },
   {
     kicker: "The extension",
-    title: "The same proof now records completed agent work.",
-    body: "A distinct client funded and approved a 1 mUSD escrowed job. Attestcoin verified its release; Agent Passport #1 records the completed job.",
+    title: "The same idea can recognise agent work.",
+    body: "A client funds a job, confirms delivery, and the agent builds a portable history of paid work.",
   },
   {
     kicker: "The product",
-    title: "One verifier, two forms of standing.",
-    body: "Credit history and agent execution history become portable, onchain credentials without trusting an indexer.",
+    title: "One product, two kinds of progress.",
+    body: "People carry repayment history. Agents carry a history of work that clients paid for.",
   },
 ] as const;
 
@@ -90,7 +90,7 @@ export default function DeckPage() {
         {index === last ? (
           <div className="hero-actions" style={{ marginTop: "1.25rem" }}>
             <Link href="/app" className="btn btn-primary">
-              Open Desk
+              Try the credit demo
             </Link>
           </div>
         ) : null}

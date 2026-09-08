@@ -189,7 +189,7 @@ export function AgentDesk() {
       });
       await sepoliaClient.waitForTransactionReceipt({ hash, timeout: 90_000 });
       await refetchMusd();
-      setStatus("Demo mUSD is ready. Approve the escrow, then fund a job.");
+      setStatus("Demo funds are ready. Allow the payment, then fund the job.");
     } finally {
       setBusy(false);
     }
@@ -200,7 +200,7 @@ export function AgentDesk() {
     const value = parseAmount(amount);
     setBusy(true);
     try {
-      setStatus("Approving the job escrow to use this demo amount…");
+      setStatus("Allowing this demo amount to pay for the job…");
       const hash = await sendPopulatedWrite({
         publicClient: sepoliaClient,
         account: address,
@@ -212,7 +212,7 @@ export function AgentDesk() {
         request: await selectedWalletRequest(),
       });
       await sepoliaClient.waitForTransactionReceipt({ hash, timeout: 90_000 });
-      setStatus("Escrow approved. You can now fund the job.");
+      setStatus("Payment is ready. You can now fund the job.");
     } finally {
       setBusy(false);
     }
@@ -228,7 +228,7 @@ export function AgentDesk() {
     const briefHash = hashCommitment(brief, "Work brief");
     setBusy(true);
     try {
-      setStatus("Funding the job escrow…");
+      setStatus("Funding the job…");
       const hash = await sendPopulatedWrite({
         publicClient: sepoliaClient,
         account: address,
@@ -244,7 +244,7 @@ export function AgentDesk() {
       const createdJobId = events[0]?.args.jobId;
       if (createdJobId !== undefined) setJobId(createdJobId.toString());
       await refetchMusd();
-      setStatus(createdJobId !== undefined ? `Job #${createdJobId} is funded. The assigned agent can now commit its work.` : "Job funded. Share the job ID with the assigned agent.");
+      setStatus(createdJobId !== undefined ? `Job #${createdJobId} is funded. The assigned agent can now add its work reference.` : "Job funded. Share the job ID with the assigned agent.");
     } finally {
       setBusy(false);
     }
@@ -269,7 +269,7 @@ export function AgentDesk() {
       });
       await sepoliaClient.waitForTransactionReceipt({ hash, timeout: 90_000 });
       await refetchJob();
-      setStatus("Work committed. The client can now release the escrow when they accept it.");
+      setStatus("Work reference saved. The client can now release payment when they accept it.");
     } finally {
       setBusy(false);
     }
@@ -280,7 +280,7 @@ export function AgentDesk() {
     const id = parseJobId(jobId);
     setBusy(true);
     try {
-      setStatus("Releasing the escrow to the agent…");
+      setStatus("Releasing payment to the agent…");
       const hash = await sendPopulatedWrite({
         publicClient: sepoliaClient,
         account: address,
@@ -318,7 +318,7 @@ export function AgentDesk() {
       });
       await sepoliaClient.waitForTransactionReceipt({ hash, timeout: 90_000 });
       await refetchJob();
-      setStatus("Job cancelled and the escrow has returned to the client.");
+      setStatus("Job cancelled and the payment has returned to the client.");
     } finally {
       setBusy(false);
     }
@@ -404,9 +404,9 @@ export function AgentDesk() {
       </header>
 
       <section className="journey-card" aria-labelledby="agent-title">
-        <p className="journey-kicker">Live testnet alpha</p>
+        <p className="journey-kicker">Demo workspace</p>
         <h1 id="agent-title">Let completed work speak for your agent.</h1>
-        <p>A client funds a demo job, an agent commits its result, and the client releases payment. Creditcoin then verifies that release as a non-transferable Agent Passport record.</p>
+        <p>A client pays for a demo job, an agent shares a work reference, and the client confirms delivery. The agent can then add that paid work to its Passport.</p>
         {!isConnected ? (
           <div className="journey-actions">
             <ConnectButton />
@@ -423,7 +423,7 @@ export function AgentDesk() {
       </ol>
 
       <section className="section" aria-labelledby="agent-record-title">
-        <div className="section-head"><h2 id="agent-record-title">Your Agent Passport</h2><span className="section-kicker">Creditcoin CC3</span></div>
+        <div className="section-head"><h2 id="agent-record-title">Your Agent Passport</h2><span className="section-kicker">Your work record</span></div>
         {hasPassport ? (
           <dl className="agent-record">
             <div><dt>Passport</dt><dd>#{passportTokenId.toString()}</dd></div>
@@ -435,7 +435,7 @@ export function AgentDesk() {
 
       <section className="section" aria-labelledby="fund-job-title">
         <div className="section-head"><h2 id="fund-job-title">Fund a job</h2><span className="section-kicker">Client</span></div>
-        <p>Use demo mUSD only. Your brief is not published; its commitment is recorded so the job can be tied to the agreed work.</p>
+        <p>Use demo funds only. Your brief stays private; the app keeps a private reference to help tie the payment to the agreed work.</p>
         <p className="tx-line mono">Sepolia mUSD {musd === undefined ? "-" : Number(formatEther(musd)).toLocaleString()}</p>
         <div className="agent-fields">
           <label className="field-label" htmlFor="agent-wallet"><span>Agent wallet</span><input id="agent-wallet" className="input agent-input" value={agentAddress} onChange={(event) => setAgentAddress(event.target.value)} placeholder="0x…" autoComplete="off" /></label>
@@ -444,40 +444,40 @@ export function AgentDesk() {
         </div>
         <div className="actions agent-actions">
           <button type="button" className="btn" disabled={!isConnected || busy} onClick={() => void faucet().catch((error: unknown) => setStatus(error instanceof Error ? error.message : String(error)))}>Get demo funds</button>
-          <button type="button" className="btn" disabled={!isConnected || busy} onClick={() => void approveEscrow().catch((error: unknown) => setStatus(error instanceof Error ? error.message : String(error)))}>Approve escrow</button>
-          <button type="button" className="btn btn-primary" disabled={!isConnected || busy} onClick={() => void createJob().catch((error: unknown) => setStatus(error instanceof Error ? error.message : String(error)))}>Fund job</button>
+          <button type="button" className="btn" disabled={!isConnected || busy} onClick={() => void approveEscrow().catch((error: unknown) => setStatus(error instanceof Error ? error.message : String(error)))}>Allow payment</button>
+          <button type="button" className="btn btn-primary" disabled={!isConnected || busy} onClick={() => void createJob().catch((error: unknown) => setStatus(error instanceof Error ? error.message : String(error)))}>Pay for job</button>
         </div>
       </section>
 
       <section className="section" aria-labelledby="job-title">
-        <div className="section-head"><h2 id="job-title">Work on a job</h2><span className="section-kicker">Client or agent</span></div>
-        <p>Enter the job ID to see its state. Only the assigned agent can commit a result, and only the client can release payment.</p>
+        <div className="section-head"><h2 id="job-title">Complete a job</h2><span className="section-kicker">Client or agent</span></div>
+        <p>Enter the job ID to see what happens next. The assigned agent adds a work reference, then the client releases payment.</p>
         <div className="agent-fields agent-job-field">
           <label className="field-label" htmlFor="job-id"><span>Job ID</span><input id="job-id" className="input agent-input" value={jobId} onChange={(event) => setJobId(event.target.value)} inputMode="numeric" /></label>
           <button type="button" className="btn btn-ghost agent-refresh" disabled={!selectedJobId} onClick={() => void refetchJob()}>Refresh job</button>
         </div>
         {selectedJobId ? <div className="agent-job-summary"><strong>Job #{selectedJobId.toString()}</strong><span>{jobStateLabel(jobState)}</span>{currentAmount !== undefined ? <span>{formatEther(currentAmount)} mUSD</span> : null}</div> : null}
         <div className="agent-fields">
-          <label className="field-label agent-text-field" htmlFor="result-reference"><span>Result reference</span><textarea id="result-reference" className="input" value={result} onChange={(event) => setResult(event.target.value)} placeholder="Paste a result URL, content digest, or delivery note" /></label>
+          <label className="field-label agent-text-field" htmlFor="result-reference"><span>Work reference</span><textarea id="result-reference" className="input" value={result} onChange={(event) => setResult(event.target.value)} placeholder="Add a delivery link, note, or private reference" /></label>
         </div>
         <div className="actions agent-actions">
-          <button type="button" className="btn" disabled={!isConnected || busy || !canSubmit} onClick={() => void submitWork().catch((error: unknown) => setStatus(error instanceof Error ? error.message : String(error)))}>Commit work</button>
+          <button type="button" className="btn" disabled={!isConnected || busy || !canSubmit} onClick={() => void submitWork().catch((error: unknown) => setStatus(error instanceof Error ? error.message : String(error)))}>Save work reference</button>
           <button type="button" className="btn btn-primary" disabled={!isConnected || busy || !canApprove} onClick={() => void approveCompletion().catch((error: unknown) => setStatus(error instanceof Error ? error.message : String(error)))}>Release payment</button>
           <button type="button" className="btn btn-ghost" disabled={!isConnected || busy || !canCancel} onClick={() => void cancelJob().catch((error: unknown) => setStatus(error instanceof Error ? error.message : String(error)))}>Cancel before work</button>
         </div>
       </section>
 
       <section className="section" aria-labelledby="verify-job-title">
-        <div className="section-head"><h2 id="verify-job-title">Verify a completed job</h2><span className="section-kicker">Assigned agent</span></div>
-        <p>Paste the Sepolia transaction created when the client released payment. Use the same agent wallet that was assigned to the job.</p>
-        <label className="field-label" htmlFor="completion-tx"><span>Sepolia JobCompleted transaction</span><input id="completion-tx" className="input agent-tx-input mono" value={completionTx} onChange={(event) => setCompletionTx(event.target.value.trim())} placeholder="0x…" autoComplete="off" /></label>
+        <div className="section-head"><h2 id="verify-job-title">Add paid work to your Passport</h2><span className="section-kicker">Assigned agent</span></div>
+        <p>Paste the payment receipt shared by the client. Use the same agent wallet that was assigned to the job.</p>
+        <label className="field-label" htmlFor="completion-tx"><span>Payment receipt ID</span><input id="completion-tx" className="input agent-tx-input mono" value={completionTx} onChange={(event) => setCompletionTx(event.target.value.trim())} placeholder="0x…" autoComplete="off" /></label>
         <div className="actions agent-actions"><button type="button" className="btn btn-primary" disabled={!isConnected || proofBusy || !isHash(completionTx)} onClick={() => void proveCompletion().catch((error: unknown) => setStatus(error instanceof Error ? error.message : String(error)))}>{proofBusy ? "Verifying completion…" : "Verify completed job"}</button></div>
         {isHash(completionTx) ? <p className="tx-line mono">Completion transaction: <a href={`${SEPOLIA_EXPLORER}/tx/${completionTx}`} target="_blank" rel="noreferrer">{completionTx}</a></p> : null}
-        {showProofFallback ? <div className="cors-panel"><h2>Proof fallback</h2><p>The browser cannot reach the proof service. Generate the proof locally, then paste the JSON here.</p><p className="mono">npm run prove -- {completionTx || "0xJOB_COMPLETED_TX"} --agent --json-out proof.json</p><textarea className="input" value={proofJson} onChange={(event) => setProofJson(event.target.value)} placeholder="Paste proof.json" aria-label="Agent completion proof JSON" /><div className="actions"><button type="button" className="btn btn-primary" disabled={!isConnected || proofBusy || !proofJson.trim()} onClick={() => void submitPastedProof().catch((error: unknown) => setStatus(error instanceof Error ? error.message : String(error)))}>Submit proof</button></div></div> : null}
+        {showProofFallback ? <div className="cors-panel"><h2>Finish verification manually</h2><p>Automatic verification is unavailable right now. Follow the manual verification guide, then paste the proof file here.</p><p><Link href="/docs#manual-verification">Open the manual verification guide</Link></p><textarea className="input" value={proofJson} onChange={(event) => setProofJson(event.target.value)} placeholder="Paste the proof file from the guide" aria-label="Agent completion proof file" /><div className="actions"><button type="button" className="btn btn-primary" disabled={!isConnected || proofBusy || !proofJson.trim()} onClick={() => void submitPastedProof().catch((error: unknown) => setStatus(error instanceof Error ? error.message : String(error)))}>Submit verification</button></div></div> : null}
       </section>
 
       <p className="status" role="status" aria-live="polite"><strong>{busy || proofBusy ? "In progress" : "Status"}</strong><span>{status}</span></p>
-      <p className="app-docs-link">Agent Passport records client-approved settlement and a result commitment. <Link href="/docs">Read the protocol details</Link>.</p>
+      <p className="app-docs-link">Agent Passport records a client-approved payment and a private work reference. <Link href="/docs">Read the technical details</Link>.</p>
     </main>
   );
 }

@@ -18,7 +18,7 @@ export default function DocsPage() {
             Credit Passport
           </Link>
           <p className="desk-top-lede">
-            How to run Credit Passport on Sepolia and Creditcoin CC3.
+            Technical reference for the Credit Passport and Agent Passport testnet demos.
           </p>
         </div>
         <div className="hero-actions">
@@ -32,8 +32,8 @@ export default function DocsPage() {
         Docs
       </h1>
       <p>
-        Same wallet on both chains. No oracle operator. Faucet → open → repay on
-        Sepolia, then prove on Creditcoin.
+        Product pages keep the flow simple. This page contains the network setup, contract
+        addresses, proof procedure, and verification evidence behind the demo.
       </p>
 
       <section className="section">
@@ -58,6 +58,19 @@ export default function DocsPage() {
           <li>Submit Merkle + continuity via proveRepayment.</li>
           <li>Score, cap, and soulbound passport write in that same transaction.</li>
         </ol>
+      </section>
+
+      <section className="section" id="manual-verification">
+        <h2>Manual verification</h2>
+        <p>
+          Use this only when the automatic verification button cannot reach the proof service.
+          Generate the proof locally, then paste the resulting JSON file into the matching
+          manual verification panel in the app.
+        </p>
+        <h3 className="docs-subhead">Credit Passport repayment</h3>
+        <pre className="docs-command"><code>npm run prove -- &lt;SEPOLIA_REPAYMENT_TX&gt; --json-out proof.json</code></pre>
+        <h3 className="docs-subhead">Agent Passport completion</h3>
+        <pre className="docs-command"><code>npm run prove -- &lt;SEPOLIA_PAYMENT_TX&gt; --agent --json-out proof.json</code></pre>
       </section>
 
       <section className="section">

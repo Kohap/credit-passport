@@ -2,25 +2,24 @@ import Link from "next/link";
 
 const SECTIONS = [
   {
-    title:
-      "A repayment on Ethereum is invisible to Creditcoin unless someone is allowed to lie.",
-    body: "Cross-chain credit today trusts bridges, oracles, or backends. Credit Passport refuses \u201cindexer says repaid.\u201d MockMarket on Sepolia is the fixture. The Attestcoin path is live.",
+    title: "Your repayment should keep counting.",
+    body: "When you move between networks, a good repayment history can be left behind. Credit Passport turns a verified repayment into a record you can carry with you.",
   },
   {
-    title: "Verification and underwriting share one Creditcoin transaction.",
-    body: "Precompile 0x\u20260FD2 verifyAndEmit. The ASC requires receiptStatus == 1 (the precompile does not). Emitter, borrower, and replay key are checked on-chain. Score, cap, and the soulbound Passport write in that same call.",
+    title: "You keep control of the record.",
+    body: "Your Credit Passport belongs to the wallet that earned it. It is not a profile held by a credit bureau or controlled by an app administrator.",
   },
   {
-    title: "One holder. One path. On-chain.",
-    body: "Open and repay on Sepolia. Wait until the height is attested. proveRepayment. Score 0 \u2192 50, cap 200 mUSD, soulbound PASS #1. If the line is funded, borrow 10 mUSD.",
+    title: "The demo is simple on purpose.",
+    body: "Get test funds, open a small loan, repay it, and verify it. You can explore the whole path without real money or a credit application.",
   },
   {
-    title: "Signal on Sepolia. Standing on Creditcoin.",
-    body: "ProofBuilder returns Merkle + continuity. CreditPassportASC is the only writer of score, cap, and NFT. The verified v2 repayment is live; the source remains a MockMarket fixture.",
+    title: "Verification replaces manual approval.",
+    body: "The record changes only after the repayment has been checked. No one at Credit Passport manually decides whether you deserve the update.",
   },
   {
-    title: "Execution history for agents uses the same primitive.",
-    body: "A distinct client wallet funded and approved a Sepolia job escrow. Attestcoin proved the payment release on Creditcoin, where Agent Passport #1 now records one completed job and 1 mUSD settled volume.",
+    title: "The same idea works for agents.",
+    body: "A client can pay an agent for a job, confirm delivery, and let the agent carry a portable history of paid work.",
   },
 ];
 
@@ -32,19 +31,21 @@ export default function DossierPage() {
           Credit Passport
         </Link>
         <nav className="landing-nav-links" aria-label="Primary">
-          <Link href="/dossier">Dossier</Link>
-          <Link href="/app">Open Desk</Link>
+          <Link href="/agent">Agent Passport</Link>
+          <Link href="/docs">Docs</Link>
+          <Link href="/app">Try the credit demo</Link>
         </nav>
       </header>
 
       <main className="landing-main">
         <section className="landing-section landing-problem">
           <p className="section-kicker">Dossier</p>
-          <h1 className="landing-headline">Credit that does not wait on an oracle.</h1>
+          <h1 className="landing-headline">A credit record that can move with you.</h1>
           <p>
-            How a repayment on Ethereum becomes standing on Creditcoin \u2014 verified, written,
-            and held.
+            Credit Passport helps people and agents turn completed, paid activity into a record
+            they can keep using across networks.
           </p>
+          <p className="landing-links"><Link href="/app">Try the credit demo</Link><Link href="/agent">Open Agent Passport</Link></p>
         </section>
 
         {SECTIONS.map((section) => (
@@ -57,8 +58,8 @@ export default function DossierPage() {
 
       <footer className="landing-footer">
         <div className="landing-footer-grid">
-          <p>Credit Passport \u00b7 Creditcoin CC3</p>
-          <p className="landing-footer-meta">Attestcoin verifyAndEmit at 0xFD2</p>
+          <p>Credit Passport</p>
+          <p className="landing-footer-meta"><Link href="/docs">Technical documentation</Link></p>
         </div>
       </footer>
     </div>

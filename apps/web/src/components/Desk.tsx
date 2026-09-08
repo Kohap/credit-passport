@@ -900,10 +900,6 @@ export function Desk() {
     return "Status";
   }, [statusTone]);
 
-  const cliCmd = repayTx
-    ? `npm run prove -- ${repayTx} --json-out proof.json`
-    : "npm run prove -- 0xSEPOLIA_TX --json-out proof.json";
-
   const step1State = repayTx ? "done" : "active";
   const step2State =
     phase === "verified"
@@ -1011,10 +1007,9 @@ export function Desk() {
 
       {!sepoliaReady || !creditReady ? (
         <section className="alert" role="alert">
-          <h2>Deploy addresses missing</h2>
+          <h2>Demo temporarily unavailable</h2>
           <p>
-            Fill <span className="mono">.env</span> / <span className="mono">NEXT_PUBLIC_*</span>{" "}
-            after Foundry deploy. Contract actions will fail until then.
+            This test page cannot reach all of its required services. <Link href="/docs">Read the setup guide</Link>.
           </p>
         </section>
       ) : null}
@@ -1148,7 +1143,7 @@ export function Desk() {
         </div>
         {faucetTx ? (
           <p className="tx-line mono">
-            Sepolia faucet:{" "}
+            Demo funds receipt:{" "}
             <a href={`${SEPOLIA_EXPLORER}/tx/${faucetTx}`} target="_blank" rel="noreferrer">
               {faucetTx}
             </a>
@@ -1156,7 +1151,7 @@ export function Desk() {
         ) : null}
         {repayTx ? (
           <p className="tx-line mono">
-            Sepolia repay:{" "}
+            Repayment receipt:{" "}
             <a href={`${SEPOLIA_EXPLORER}/tx/${repayTx}`} target="_blank" rel="noreferrer">
               {repayTx}
             </a>
@@ -1196,7 +1191,7 @@ export function Desk() {
         </p>
         {creditTx ? (
           <p className="tx-line mono">
-            Creditcoin prove:{" "}
+            Verification receipt:{" "}
             <a href={`${CREDITCOIN_EXPLORER}/tx/${creditTx}`} target="_blank" rel="noreferrer">
               {creditTx}
             </a>
@@ -1205,17 +1200,16 @@ export function Desk() {
 
         {corsFallback ? (
           <div className="cors-panel" aria-labelledby="cli-fallback-title">
-            <h2 id="cli-fallback-title">CLI proof fallback</h2>
+            <h2 id="cli-fallback-title">Finish verification manually</h2>
             <p>
-              The browser cannot reach the proof service. Run this locally, then paste{" "}
-              <span className="mono">proof.json</span>.
+              Automatic verification is unavailable right now. Follow the manual verification guide,
+              then paste the proof file here.
             </p>
-            <p className="mono">{cliCmd}</p>
-            <p className="mono tx-line">Sepolia tx: {repayTx ?? "-"}</p>
+            <p><Link href="/docs#manual-verification">Open the manual verification guide</Link></p>
             <textarea
               id="pasted-proof"
               className="input"
-              placeholder="Paste proof.json from: npm run prove -- <tx> --json-out proof.json"
+              placeholder="Paste the proof file from the guide"
               value={pasteJson}
               onChange={(e) => setPasteJson(e.target.value)}
               aria-label="Proof JSON"
@@ -1231,7 +1225,7 @@ export function Desk() {
                 disabled={!isConnected || !creditReady || !pasteJson.trim()}
                 onClick={() => void submitPastedProof()}
               >
-                Submit pasted proof
+                Submit verification
               </button>
             </div>
           </div>

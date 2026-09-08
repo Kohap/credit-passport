@@ -3,9 +3,6 @@
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useState } from "react";
 
-const PRECOMPILE = "0x0000000000000000000000000000000000000FD2";
-const ASC = "0xc5c9B5A4842B20D945aAD6824A58Afdbb78fecbb";
-const PROOF_BUILDER_URL = "https://prover.cc3-testnet.creditcoin.network";
 const REPO = "https://github.com/Kohap/credit-passport";
 
 function StampMark() {
@@ -64,37 +61,22 @@ function ThemeMark({ theme }: { theme: LandingTheme }) {
 const INSTRUMENTS = [
   {
     title: "Passport",
-    body: "A soulbound PASS token on Creditcoin. One holder, one book, minted in the same transaction as the first verified repayment.",
+    body: "A personal credit record that stays with the wallet that earned it.",
   },
   {
-    title: "Score",
-    body: "+50 on the first fully repaid verified loan, then +30 for later fully repaid verified loans. Capped at 100.",
+    title: "Progress",
+    body: "Each verified repayment strengthens your test credit record.",
   },
   {
-    title: "CreditLine",
-    body: "Borrow cap is 100 mUSD plus twice the score. Drawn against the line only after proveRepayment writes.",
-  },
-] as const;
-
-const DEV_POINTS = [
-  {
-    title: "Attestcoin precompile",
-    body: `verifyAndEmit at ${PRECOMPILE}. Receipt status, emitter, borrower, and replay key are checked on Creditcoin — not by an operator.`,
-  },
-  {
-    title: "proveRepayment",
-    body: `CreditPassportASC is the only writer of score, cap, and the NFT. ${ASC}`,
-  },
-  {
-    title: "ProofBuilder",
-    body: "Merkle inclusion plus continuity for a LoanRepaid receipt. The desk can paste proof.json if you build locally.",
+    title: "Opportunity",
+    body: "A verified record can unlock a larger demo borrowing limit.",
   },
 ] as const;
 
 const FAQ = [
   {
     q: "What does Credit Passport issue?",
-    a: "A soulbound passport NFT, a repayment score, and a borrow cap on Creditcoin after a verified Ethereum repayment. Nothing is written until Attestcoin accepts the inclusion proof.",
+    a: "A personal, non-transferable credit record, a repayment score, and a demo borrowing limit after a repayment is verified.",
   },
   {
     q: "Is this a bureau or a lender?",
@@ -102,11 +84,11 @@ const FAQ = [
   },
   {
     q: "What is live, and what is a fixture?",
-    a: "Attestcoin verification is live on Creditcoin CC3. MockMarket on Sepolia is a fixture that emits LoanRepaid so the path can be run. The intended next source is a live lending-pool repay event.",
+    a: "The verification path is live on testnet. The current loan and currency are demos so you can safely try the full experience.",
   },
   {
     q: "Who can change a score?",
-    a: "Only CreditPassportASC, after proveRepayment succeeds. There is no oracle operator and no admin write on score, cap, or the passport.",
+    a: "Only a verified repayment can update it. No person at Credit Passport manually approves a score.",
   },
   {
     q: "What data is stored?",
@@ -118,7 +100,7 @@ const FAQ = [
   },
   {
     q: "Which networks?",
-    a: "Sepolia (11155111) and Creditcoin CC3 (102031). Attestcoin chainKey for Sepolia is 1 — not the chainId.",
+    a: "The demo starts on Ethereum Sepolia and creates the record on Creditcoin CC3. Technical network details are in Docs.",
   },
 ] as const;
 
@@ -221,18 +203,17 @@ export function Landing() {
           </p>
           <div className="landing-hero-aside">
             <h1 className="landing-headline">
-              A repayment on Ethereum becomes credit on Creditcoin.
+              Turn a repaid loan into credit you can carry.
             </h1>
             <p className="landing-lede">
-              Attestcoin checks LoanRepaid inclusion on-chain. Same wallet. No oracle
-              operator.
+              Repay a demo loan, verify it, and keep the credit record in your wallet.
             </p>
             <div className="hero-actions">
               <Link href="/app" className="btn btn-primary landing-cta">
-                Open Desk
+                Try the credit demo
               </Link>
               <Link href="/dossier" className="btn btn-ghost landing-cta">
-                Read the dossier
+                See how it works
               </Link>
             </div>
           </div>
@@ -243,9 +224,8 @@ export function Landing() {
         <section className="landing-section landing-problem" id="product" aria-labelledby="product-title">
           <h2 id="product-title">Credit should travel with the borrower</h2>
           <p>
-            A repayment on Ethereum does not automatically count on Creditcoin. Oracles put
-            trust back in the middle. Credit Passport uses Attestcoin so a proven repayment
-            can raise score, mint a soulbound Passport, and open a CreditLine.
+            A repayment should not disappear when you move between networks. Credit Passport
+            turns a verified repayment into a credit record that stays with your wallet.
           </p>
           <ul className="landing-list">
             {INSTRUMENTS.map((item) => (
@@ -261,41 +241,30 @@ export function Landing() {
           <h2 id="how-title">How it works</h2>
           <ol className="landing-steps">
             <li>
-              <h3>Repay on Sepolia</h3>
-              <p>Faucet mUSD, open a mock loan, repay so MockMarket emits LoanRepaid.</p>
+              <h3>Try a demo loan</h3>
+              <p>Get test funds, open a small demo loan, and repay it. No real money is involved.</p>
             </li>
             <li>
-              <h3>Prove with Attestcoin</h3>
-              <p>Wait for height attestation, build the inclusion proof, submit on Creditcoin.</p>
+              <h3>Verify your repayment</h3>
+              <p>Credit Passport checks the repayment and adds it to your record.</p>
             </li>
             <li>
-              <h3>Unlock credit</h3>
-              <p>Score updates, Passport mints, and you can borrow against the CreditLine.</p>
+              <h3>See your credit</h3>
+              <p>Your Passport and demo borrowing limit appear when verification is complete.</p>
             </li>
           </ol>
         </section>
 
         <section className="landing-section" id="developers" aria-labelledby="developers-title">
-          <h2 id="developers-title">Integrate the proof, not an oracle</h2>
+          <h2 id="developers-title">Built for builders</h2>
           <p>
-            Same EOA on Sepolia and Creditcoin CC3. The desk, ProofBuilder, and contracts
-            are public. Read the docs or clone the repo if you are wiring a repay source.
+            The contracts, testnet deployments, architecture, and integration guide are public.
+            Start with the documentation when you want to connect your own repayment source.
           </p>
-          <ul className="landing-list">
-            {DEV_POINTS.map((item) => (
-              <li key={item.title}>
-                <h3>{item.title}</h3>
-                <p className="landing-break">{item.body}</p>
-              </li>
-            ))}
-          </ul>
           <p className="landing-links">
-            <Link href="/docs">Docs</Link>
-            <a href={PROOF_BUILDER_URL} target="_blank" rel="noreferrer">
-              ProofBuilder
-            </a>
+            <Link href="/docs">Read the technical docs</Link>
             <a href={REPO} target="_blank" rel="noreferrer">
-              Contracts and CLI
+              View the source code
             </a>
           </p>
         </section>
@@ -337,7 +306,7 @@ export function Landing() {
             See how a verified repayment can become a portable credit record.
           </p>
           <Link href="/app" className="btn btn-primary landing-cta">
-            Open Desk
+            Start the demo
           </Link>
         </div>
       </section>

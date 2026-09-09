@@ -15,6 +15,7 @@ export function ConnectButton() {
   const { connectors, connectAsync, isPending } = useConnect();
   const { disconnect, disconnectAsync } = useDisconnect();
   const [busy, setBusy] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   const [selectedConnectorUid, setSelectedConnectorUid] = useState<string>();
 
   const walletConnectors = useMemo(() => {
@@ -43,9 +44,10 @@ export function ConnectButton() {
 
   useEffect(() => {
     let off: (() => void) | undefined;
+    let cancelled = false;
     void (async () => {
       const provider = (await connector?.getProvider()) as WalletProvider | undefined;
-      if (!provider?.on) return;
+      if (cancelled || !provider?.on) return;
       const onAccounts = (...args: unknown[]) => {
         const accounts = Array.isArray(args[0]) ? (args[0] as string[]) : [];
         if (!accounts.length || !shouldReconnectWallet()) {
@@ -55,17 +57,25 @@ export function ConnectButton() {
       };
       provider.on("accountsChanged", onAccounts);
       off = () => provider.removeListener?.("accountsChanged", onAccounts);
-    })();
-    return () => off?.();
+    })().catch(() => {
+      if (!cancelled) setConnectionError("Unable to reach your wallet. Unlock it and try connecting again.");
+    });
+    return () => {
+      cancelled = true;
+      off?.();
+    };
   }, [connector, disconnect]);
 
   async function onDisconnect() {
     setBusy(true);
+    setConnectionError(null);
     markWalletUnlinked();
     try {
       const provider = (await connector?.getProvider()) as WalletProvider | undefined;
       await revokeWalletSession(provider);
       await disconnectAsync();
+    } catch {
+      setConnectionError("Unable to disconnect. Try again or disconnect this site in your wallet.");
     } finally {
       setBusy(false);
     }
@@ -75,9 +85,12 @@ export function ConnectButton() {
     const target = selectedConnector;
     if (!target) return;
     setBusy(true);
+    setConnectionError(null);
     try {
       clearWalletUnlinked();
       await connectAsync({ connector: target });
+    } catch {
+      setConnectionError("Wallet connection was not completed. Unlock your wallet and try again.");
     } finally {
       setBusy(false);
     }
@@ -85,11 +98,14 @@ export function ConnectButton() {
 
   if (isConnected && address) {
     return (
+      <div className="wallet-connect">
       <button type="button" className="btn" disabled={busy} onClick={() => void onDisconnect()}>
         {busy
           ? "Disconnecting…"
           : `${address.slice(0, 6)}…${address.slice(-4)} · Disconnect`}
       </button>
+      {connectionError && <p role="alert">{connectionError}</p>}
+      </div>
     );
   }
 
@@ -124,6 +140,7 @@ export function ConnectButton() {
             ? `Connect ${selectedConnector.name}`
             : "Connect wallet"}
       </button>
+      {connectionError && <p role="alert">{connectionError}</p>}
     </div>
   );
 }

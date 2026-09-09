@@ -21,3 +21,5 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run security:check
+      - run: node --import tsx --test src/lib/mcp.test.ts
+        working-directory: apps/web

@@ -129,10 +129,9 @@ function isTransactionHash(value: unknown): value is Hex {
 }
 
 function restoreProofState(address: Address) {
-  const raw = window.localStorage.getItem(proofStorageKey(address));
-  if (!raw) return { repayTx: undefined, proof: null };
-
   try {
+    const raw = window.localStorage.getItem(proofStorageKey(address));
+    if (!raw) return { repayTx: undefined, proof: null };
     const saved = JSON.parse(raw) as { repayTx?: unknown; proof?: unknown };
     const repayTx = isTransactionHash(saved.repayTx) ? saved.repayTx : undefined;
     if (!repayTx || !saved.proof) return { repayTx, proof: null };
@@ -243,14 +242,18 @@ export function Desk() {
     if (!address || persistedForAddress !== address.toLowerCase()) return;
 
     const key = proofStorageKey(address);
-    if (!repayTx) {
-      window.localStorage.removeItem(key);
-      return;
+    try {
+      if (!repayTx) {
+        window.localStorage.removeItem(key);
+        return;
+      }
+      window.localStorage.setItem(
+        key,
+        JSON.stringify({ repayTx, proof, savedAt: Date.now() }),
+      );
+    } catch {
+      // Storage is optional; keep the active proof usable in restricted browsers.
     }
-    window.localStorage.setItem(
-      key,
-      JSON.stringify({ repayTx, proof, savedAt: Date.now() }),
-    );
   }, [address, persistedForAddress, proof, repayTx]);
 
   const { data: musd, refetch: refetchMusd } = useReadContract({

@@ -105,10 +105,14 @@ function useLandingTheme() {
   const [theme, setTheme] = useState<LandingTheme>("dark");
 
   useLayoutEffect(() => {
-    const stored = window.localStorage.getItem(THEME_KEY);
-    if (stored === "light" || stored === "dark") {
-      setTheme(stored);
-      return;
+    try {
+      const stored = window.localStorage.getItem(THEME_KEY);
+      if (stored === "light" || stored === "dark") {
+        setTheme(stored);
+        return;
+      }
+    } catch {
+      // Use the system theme when browser storage is unavailable.
     }
     if (window.matchMedia("(prefers-color-scheme: light)").matches) {
       setTheme("light");
@@ -118,7 +122,11 @@ function useLandingTheme() {
   function toggle() {
     setTheme((current) => {
       const next = current === "dark" ? "light" : "dark";
-      window.localStorage.setItem(THEME_KEY, next);
+      try {
+        window.localStorage.setItem(THEME_KEY, next);
+      } catch {
+        // A theme change does not require persistent storage.
+      }
       return next;
     });
   }
@@ -140,10 +148,43 @@ export function Landing() {
 
   useEffect(() => {
     if (!menuOpen) return;
+    const menu = document.getElementById("landing-primary-menu");
+    if (!menu) return;
+    const trigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const background = [
+      ...Array.from(menu.parentElement?.children ?? []).filter((element) => element !== menu),
+      ...Array.from(menu.parentElement?.parentElement?.children ?? []).filter((element) => element !== menu.parentElement),
+    ].filter((element): element is HTMLElement => element instanceof HTMLElement);
+    const previousInert = background.map((element) => element.inert);
+    background.forEach((element) => { element.inert = true; });
+    const controls = () => Array.from(menu.querySelectorAll<HTMLElement>("a[href], button"))
+      .filter((element) => element.getClientRects().length > 0);
+    controls()[0]?.focus({ preventScroll: true });
+    function trapFocus(event: KeyboardEvent) {
+      if (event.key !== "Tab") return;
+      const items = controls();
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
+    }
+    const mobile = window.matchMedia("(max-width: 800px)");
+    const onResize = () => { if (!mobile.matches) setMenuOpen(false); };
+    mobile.addEventListener("change", onResize);
+    menu.addEventListener("keydown", trapFocus);
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = previousOverflow;
+      menu.removeEventListener("keydown", trapFocus);
+      mobile.removeEventListener("change", onResize);
+      background.forEach((element, index) => { element.inert = previousInert[index]; });
+      trigger?.focus({ preventScroll: true });
     };
   }, [menuOpen]);
 
@@ -158,7 +199,8 @@ export function Landing() {
           <StampMark />
           Credit Passport
         </Link>
-        <nav className="landing-nav-links" id="landing-primary-menu" data-open={menuOpen} aria-label="Primary">
+        <nav className="landing-nav-links" id="landing-primary-menu" data-open={menuOpen} aria-label="Primary"
+          role={menuOpen ? "dialog" : undefined} aria-modal={menuOpen ? true : undefined}>
           <div className="landing-menu-sheet-head">
             <Link href="/app" className="landing-menu-desk" onClick={closeMenu}>
               Open Desk

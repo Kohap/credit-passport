@@ -48,6 +48,7 @@ function rateLimited(requester: string): boolean {
     }
   }
   const current = requests.get(requester);
+  if (!current && requests.size >= MAX_REQUESTERS) return true;
 
   if (!current || current.resetAt <= now) {
     requests.set(requester, { count: 1, resetAt: now + RATE_WINDOW_MS });
@@ -79,12 +80,13 @@ async function creditPassport(wallet: Address) {
 
   let passportId: string | null = null;
   try {
-    passportId = (await creditcoinClient.readContract({
+    const tokenId = await creditcoinClient.readContract({
       address: addresses.passportNft as Address,
       abi: passportNftAbi,
       functionName: "tokenOf",
       args: [wallet],
-    })).toString();
+    });
+    passportId = tokenId === BigInt(0) ? null : tokenId.toString();
   } catch {
     passportId = null;
   }
@@ -121,12 +123,13 @@ async function agentPassport(wallet: Address) {
 
   let passportId: string | null = null;
   try {
-    passportId = (await creditcoinClient.readContract({
+    const tokenId = await creditcoinClient.readContract({
       address: addresses.agentPassportNft as Address,
       abi: agentPassportNftAbi,
       functionName: "tokenOf",
       args: [wallet],
-    })).toString();
+    });
+    passportId = tokenId === BigInt(0) ? null : tokenId.toString();
   } catch {
     passportId = null;
   }
@@ -179,9 +182,23 @@ async function callTool(name: string, args: unknown) {
 export async function handleMcp(body: string, requester: string) {
   if (rateLimited(requester)) return { status: 429, body: error(null, -32029, "Too many requests. Try again in a minute.") };
 
+  if (new TextEncoder().encode(body).byteLength > MAX_MCP_BODY_BYTES) {
+    return { status: 413, body: error(null, -32600, "Request body is too large.") };
+  }
+  let parsed: unknown;
   try {
-    if (!body || body.length > MAX_MCP_BODY_BYTES) throw new Error("Request body is too large.");
-    const rpc = JSON.parse(body) as RpcRequest;
+    parsed = JSON.parse(body);
+  } catch {
+    return { status: 200, body: error(null, -32700, "Invalid JSON.") };
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return { status: 200, body: error(null, -32600, "Invalid JSON-RPC request.") };
+  }
+  const rpc = parsed as RpcRequest;
+  if (rpc.id !== undefined && rpc.id !== null && typeof rpc.id !== "string" && typeof rpc.id !== "number") {
+    return { status: 200, body: error(null, -32600, "Invalid request ID.") };
+  }
+  try {
     if (rpc.jsonrpc !== "2.0" || typeof rpc.method !== "string") {
       return { status: 200, body: error(rpc.id, -32600, "Invalid JSON-RPC request.") };
     }
@@ -196,12 +213,19 @@ export async function handleMcp(body: string, requester: string) {
     if (rpc.method === "tools/call") {
       const params = rpc.params as { name?: unknown; arguments?: unknown } | undefined;
       if (!params || typeof params.name !== "string") return { status: 200, body: error(rpc.id, -32602, "Provide a tool name.") };
+      if (!tools.some((tool) => tool.name === params.name)) return { status: 200, body: error(rpc.id, -32602, "Unknown tool.") };
+      if (params.name !== "get_credit_passport_links") {
+        try {
+          walletFrom(params.arguments);
+        } catch {
+          return { status: 200, body: error(rpc.id, -32602, "Provide a valid wallet address.") };
+        }
+      }
       return { status: 200, body: result(rpc.id, await callTool(params.name, params.arguments)) };
     }
     if (rpc.method === "notifications/initialized") return { status: 202, body: null };
     return { status: 200, body: error(rpc.id, -32601, "Method not found.") };
-  } catch (cause) {
-    const message = cause instanceof Error ? cause.message : "Unable to complete the request.";
-    return { status: 200, body: error(null, -32000, message) };
+  } catch {
+    return { status: 200, body: error(rpc.id, -32000, "Unable to read the network. Please try again shortly.") };
   }
 }

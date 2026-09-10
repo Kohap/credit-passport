@@ -66,9 +66,9 @@ Its trust model, verification procedure, and known Sybil/dispute limitations are
 
 ## Aave repayment alpha
 
-The repository contains a separate, **not yet end-to-end verified** Aave V3 Sepolia repayment adapter. It leaves the live MockMarket v2 and Agent Passport demos unchanged. The current source requires Attestcoin proof of a successful, direct `repay(asset, type(uint256).max, 2, borrower)` transaction and a matching Pool `Repay` event. These current-source checks must not be described as live protections. See [alpha status and release gates](docs/AAVE_ALPHA.md).
+The repository contains a separate Aave V3 Sepolia repayment adapter. It leaves the live MockMarket v2 and Agent Passport demos unchanged. The deployed alpha requires Attestcoin proof of a successful, direct `repay(asset, type(uint256).max, 2, borrower)` transaction and a matching Pool `Repay` event. A live LINK-backed full repayment and Creditcoin proof were verified on 2026-09-10. See [alpha status and remaining limitations](docs/AAVE_ALPHA.md).
 
-The addresses below are historical experiments, not the approved deployment of the current source. Do not configure them as the current alpha verifier.
+The addresses below are the verified deployment of the current source. Historical experiments are not listed here.
 
 | Contract | Network | Address |
 | --- | --- | --- |
@@ -78,7 +78,7 @@ The addresses below are historical experiments, not the approved deployment of t
 | Aave alpha CreditLine | Creditcoin CC3 | [`0xB659a98E1c6dBf4bf921eBF0a7f9e062d049F3f3`](https://creditcoin-testnet.blockscout.com/address/0xB659a98E1c6dBf4bf921eBF0a7f9e062d049F3f3) |
 | Aave alpha PassportNFT | Creditcoin CC3 | [`0xcEb5184F907775EB1bced75e81F4cd9f29022f12`](https://creditcoin-testnet.blockscout.com/address/0xcEb5184F907775EB1bced75e81F4cd9f29022f12) |
 
-Start with `bash scripts/aave-sepolia-e2e.sh --check` (read-only). On 2026-09-10, a direct DAI supply simulation still returned Aave error `51` (`SUPPLY_CAP_EXCEEDED`); no external Aave proof is claimed. After resolving capacity and verifying a deployment of the current revision, the write-enabled script can create a source repayment, then `npm run prove -- <AAVE_REPAY_TX> --aave --submit --claim <same wallet>` can submit it. This adapter covers one reserve's variable debt, not every position or production underwriting.
+Start with `bash scripts/aave-sepolia-e2e.sh --check --collateral LINK` (read-only). The write-enabled script can create a source repayment, then `npm run prove -- <AAVE_REPAY_TX> --aave --submit --claim <same wallet>` can submit it. This adapter covers one reserve's variable debt, not every position or production underwriting.
 
 ## Deployed addresses
 

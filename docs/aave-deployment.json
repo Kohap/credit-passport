@@ -1,5 +1,5 @@
 {
-  "status": "awaiting-live-proof",
+  "status": "verified-live-proof",
   "date": "2026-09-10",
   "contractSourceCommit": "890bbeb",
   "deployer": "0x01e4A64145873c0574c6d77C0d7e07d313B3F2fa",
@@ -31,13 +31,14 @@
     "updaterTx": "0x93a8c9e43068607a66d765a03c0b144e93cc634a012d36faae735c480c3b6bd1",
     "minterTx": "0x784d6ed5c9683ef487fb344cf7b05dce9f87c46d2e313754ccec1914f8cc7183",
     "fundingTx": "0x4b0e42403d541555633903069f3becdb1f576b79dcb4c719d7f9e9403bc55e3c",
-    "proofTx": null
+    "proofTx": "0xac4ee54fda4821b896c654298a5e4a37d016c64befed0f3bcf6260fd361095d2"
   },
   "verification": {
     "ascRuntime": "exact match after checking constructor immutable values",
     "reusedRuntime": "CreditScore, CreditLine, PassportNFT match after excluding compiler metadata and checking CreditLine asset immutable",
     "sourceVariableDebtAfterRepayment": "0",
     "allAlphaRolesBoundToAsc": true,
-    "liveProof": false
+    "liveProof": true,
+    "proofHeaderNumber": 11672432
   }
 }

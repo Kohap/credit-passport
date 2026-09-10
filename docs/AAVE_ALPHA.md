@@ -1,4 +1,4 @@
-# Aave repayment adapter: source alpha
+# Aave repayment adapter: verified testnet alpha
 
 Updated 2026-09-10. This is separate from the working human and Agent Passport demos.
 
@@ -6,9 +6,9 @@ Updated 2026-09-10. This is separate from the working human and Agent Passport d
 
 - Thirteen local contract tests pass. The tests mock the Attestcoin verifier; they do not establish a valid live inclusion proof.
 - Receipt tests cover asset, emitter, sender, target, status, amount, malformed topics, aToken rejection, replay rejection, and rollback after an invalid receipt.
-- Sepolia DAI supply simulation still fails with error 51 (supply cap exceeded). No source transaction was sent during this review.
-- The later CreditScore at `0x17d18e6FDd0aE48d15C0655D9Eb5f60C90DC07e8` has writer zero. Treat this deployment as incomplete.
-- The historical ASC in the README predates the current receipt checks. It is not an approved current-source deployment. Alpha addresses are deliberately blank in `.env.example`.
+- DAI supply is full, so the verified source run used the official LINK reserve instead.
+- The current deployment at `0x2fe50115eE40c4264b643a23102e4cEf88A2AebB` matches the reviewed bytecode and has all three writer roles bound.
+- The live proof was submitted at `https://creditcoin-testnet.blockscout.com/tx/0xac4ee54fda4821b896c654298a5e4a37d016c64befed0f3bcf6260fd361095d2`.
 
 ## Scope and limitations
 
@@ -16,13 +16,11 @@ The adapter accepts a direct Pool repayment by the same wallet claiming credit, 
 
 This proves a historical action, not creditworthiness, identity, income, or absence of other debt. Small repeated borrow/repay cycles can increase the demo score. The trusted Pool is upgradeable: accepting historical receipts assumes the Pool implementation at that block had the expected semantics. Production use requires version-aware verification and an underwriting policy, not just this adapter.
 
-## Remaining release gates
+## Remaining limitations
 
-1. Obtain a genuine direct full variable-debt repayment from a debt-free test wallet without modifying an unrelated position.
-2. Reconcile all earlier deployment transactions before deploying further contracts. Check bytecode, constructor bindings, owners, writer/updater/minter roles, and inventory.
-3. Deploy the reviewed revision and record its exact source commit, addresses, and transaction receipts. Do not change the proven v2 or Agent Passport roles.
-4. Generate and submit the real Attestcoin proof. Confirm score, cap, NFT, and replay rejection on CC3.
-5. Only then configure the approved alpha addresses and publish live-proof claims.
+1. This is a testnet alpha, not production underwriting.
+2. DAI supply capacity is currently full; LINK was used for the verified run.
+3. The adapter covers one reserve's variable debt and does not assess identity, income, or other debt.
 
 ## Local checks
 

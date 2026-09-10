@@ -23,7 +23,7 @@
     "deploy:aave-passport": "bash scripts/deploy-aave-passport.sh",
     "dev:web": "npm run dev --workspace=apps/web",
     "build:web": "npm run build --workspace=apps/web",
-    "build:pages": "GITHUB_PAGES=true npm run build --workspace=apps/web"
+    "build:pages": "bash scripts/build-pages.sh"
   },
   "engines": {
     "node": ">=20"

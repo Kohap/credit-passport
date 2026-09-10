@@ -2,11 +2,14 @@ import Link from "next/link";
 import {
   ATTESTOR_DASHBOARD,
   CREDITCOIN_CHAIN_ID,
+  CREDITCOIN_EXPLORER,
   PROOF_BUILDER_URL,
   SCORE_FORMULA,
+  SEPOLIA_EXPLORER,
   SEPOLIA_CHAIN_ID,
   SEPOLIA_CHAIN_KEY,
   addresses,
+  aaveAlpha,
 } from "@/config/networks";
 
 export default function DocsPage() {
@@ -124,6 +127,29 @@ export default function DocsPage() {
           <dt>first credential</dt>
           <dd>Agent Passport #1, one completed job, 1 mUSD settled</dd>
         </dl>
+      </section>
+
+      <section className="section" id="aave-repayment-alpha">
+        <h2>Aave repayment alpha</h2>
+        <p>
+          Aave V3 repayments can be used as another source of verified credit history. The current
+          testnet proof used LINK collateral and a fully repaid USDC variable loan, then verified the
+          repayment on Creditcoin with the same wallet.
+        </p>
+        <dl className="kv">
+          <dt>Aave V3 Pool</dt>
+          <dd>{aaveAlpha.pool}</dd>
+          <dt>Repayment source</dt>
+          <dd><a href={`${SEPOLIA_EXPLORER}/tx/${aaveAlpha.sourceTx}`} target="_blank" rel="noreferrer">View Sepolia repayment</a></dd>
+          <dt>Creditcoin proof</dt>
+          <dd><a href={`${CREDITCOIN_EXPLORER}/tx/${aaveAlpha.proofTx}`} target="_blank" rel="noreferrer">View proveAaveRepayment</a></dd>
+          <dt>Creditcoin Aave ASC</dt>
+          <dd>{aaveAlpha.passportAsc}</dd>
+        </dl>
+        <p className="footnote">
+          This is a verified testnet alpha, not production underwriting. The local CLI remains the
+          execution path for generating and submitting an Aave proof.
+        </p>
       </section>
 
       <section className="section">

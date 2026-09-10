@@ -71,6 +71,40 @@ export const PROOF_BUILDER_URL_FALLBACK = publicHttpsUrl(
   "https://proof-gen-api.cc3-testnet.creditcoin.network",
 );
 
+/** Verified Aave V3 Sepolia repayment source and CC3 alpha deployment. */
+export const aaveAlpha = {
+  pool: publicAddress(
+    process.env.NEXT_PUBLIC_AAVE_SEPOLIA_POOL,
+    "0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951",
+  ),
+  link: publicAddress(
+    process.env.NEXT_PUBLIC_AAVE_SEPOLIA_LINK,
+    "0xf8Fb3713D459D7C1018BD0A49D19b4C44290EBE5",
+  ),
+  usdc: publicAddress(
+    process.env.NEXT_PUBLIC_AAVE_SEPOLIA_USDC,
+    "0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8",
+  ),
+  passportAsc: publicAddress(
+    process.env.NEXT_PUBLIC_CREDITCOIN_AAVE_PASSPORT_ASC,
+    "0x2fe50115eE40c4264b643a23102e4cEf88A2AebB",
+  ),
+  creditScore: publicAddress(
+    process.env.NEXT_PUBLIC_CREDITCOIN_AAVE_CREDIT_SCORE,
+    "0x17d18e6FDd0aE48d15C0655D9Eb5f60C90DC07e8",
+  ),
+  creditLine: publicAddress(
+    process.env.NEXT_PUBLIC_CREDITCOIN_AAVE_CREDIT_LINE,
+    "0x54e96e15261057a007D5a9613A5EAD1551194f58",
+  ),
+  passportNft: publicAddress(
+    process.env.NEXT_PUBLIC_CREDITCOIN_AAVE_PASSPORT_NFT,
+    "0xb0d2ab6f79c9aC220FbbDd299f71E9e7711c2B4f",
+  ),
+  sourceTx: "0xeae5b0bebf5e7048aaedccfe21f6082be3e6b3eb6eed8d56c1bd3f9fa09f4c62",
+  proofTx: "0xac4ee54fda4821b896c654298a5e4a37d016c64befed0f3bcf6260fd361095d2",
+} as const;
+
 export const SEPOLIA_RPCS: readonly string[] = [
   SEPOLIA_RPC,
   PUBLIC_SEPOLIA,

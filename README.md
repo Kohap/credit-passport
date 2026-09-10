@@ -73,10 +73,10 @@ The addresses below are the verified deployment of the current source. Historica
 | Contract | Network | Address |
 | --- | --- | --- |
 | Aave V3 Pool | Sepolia | [`0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951`](https://sepolia.etherscan.io/address/0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951) |
-| Aave repayment ASC | Creditcoin CC3 | [`0xCC83b2d0b052DEc64Ddb80915eC408b933b7B29f`](https://creditcoin-testnet.blockscout.com/address/0xCC83b2d0b052DEc64Ddb80915eC408b933b7B29f) |
-| Aave alpha CreditScore | Creditcoin CC3 | [`0x3E66613643DaB431BB1cED436DB94828A15189b8`](https://creditcoin-testnet.blockscout.com/address/0x3E66613643DaB431BB1cED436DB94828A15189b8) |
-| Aave alpha CreditLine | Creditcoin CC3 | [`0xB659a98E1c6dBf4bf921eBF0a7f9e062d049F3f3`](https://creditcoin-testnet.blockscout.com/address/0xB659a98E1c6dBf4bf921eBF0a7f9e062d049F3f3) |
-| Aave alpha PassportNFT | Creditcoin CC3 | [`0xcEb5184F907775EB1bced75e81F4cd9f29022f12`](https://creditcoin-testnet.blockscout.com/address/0xcEb5184F907775EB1bced75e81F4cd9f29022f12) |
+| Aave repayment ASC | Creditcoin CC3 | [`0x2fe50115eE40c4264b643a23102e4cEf88A2AebB`](https://creditcoin-testnet.blockscout.com/address/0x2fe50115eE40c4264b643a23102e4cEf88A2AebB) |
+| Aave alpha CreditScore | Creditcoin CC3 | [`0x17d18e6FDd0aE48d15C0655D9Eb5f60C90DC07e8`](https://creditcoin-testnet.blockscout.com/address/0x17d18e6FDd0aE48d15C0655D9Eb5f60C90DC07e8) |
+| Aave alpha CreditLine | Creditcoin CC3 | [`0x54e96e15261057a007D5a9613A5EAD1551194f58`](https://creditcoin-testnet.blockscout.com/address/0x54e96e15261057a007D5a9613A5EAD1551194f58) |
+| Aave alpha PassportNFT | Creditcoin CC3 | [`0xb0d2ab6f79c9aC220FbbDd299f71E9e7711c2B4f`](https://creditcoin-testnet.blockscout.com/address/0xb0d2ab6f79c9aC220FbbDd299f71E9e7711c2B4f) |
 
 Start with `bash scripts/aave-sepolia-e2e.sh --check --collateral LINK` (read-only). The write-enabled script can create a source repayment, then `npm run prove -- <AAVE_REPAY_TX> --aave --submit --claim <same wallet>` can submit it. This adapter covers one reserve's variable debt, not every position or production underwriting.
 

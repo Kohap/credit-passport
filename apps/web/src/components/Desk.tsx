@@ -18,6 +18,7 @@ import {
   SEPOLIA_EXPLORER,
   SEPOLIA_RPC,
   addresses,
+  aaveAlpha,
 } from "@/config/networks";
 import {
   addWalletChain,
@@ -1023,6 +1024,40 @@ export function Desk() {
           </p>
         </section>
       ) : null}
+
+      <section className="section alpha-source" aria-labelledby="aave-alpha-title">
+        <div className="section-head">
+          <h2 id="aave-alpha-title">Aave repayment alpha</h2>
+          <span className="status-pill" data-tone="success">Verified on testnet</span>
+        </div>
+        <p>
+          Credit Passport can also recognize a real Aave V3 repayment. This is an additional proof source;
+          the guided demo below remains the quickest way to try the full journey.
+        </p>
+        <div className="alpha-source-grid">
+          <div>
+            <span className="alpha-label">Source</span>
+            <strong>Aave V3 on Sepolia</strong>
+            <span className="alpha-detail">LINK-backed variable debt repayment</span>
+          </div>
+          <div>
+            <span className="alpha-label">Result</span>
+            <strong>Creditcoin CC3 proof</strong>
+            <span className="alpha-detail">Same wallet, verified receipt</span>
+          </div>
+        </div>
+        <div className="actions alpha-actions">
+          <a className="btn btn-ghost" href={`${SEPOLIA_EXPLORER}/tx/${aaveAlpha.sourceTx}`} target="_blank" rel="noreferrer">
+            View Aave repayment
+          </a>
+          <a className="btn btn-ghost" href={`${CREDITCOIN_EXPLORER}/tx/${aaveAlpha.proofTx}`} target="_blank" rel="noreferrer">
+            View Creditcoin proof
+          </a>
+          <Link className="btn btn-ghost" href="/docs#aave-repayment-alpha">
+            Read how it works
+          </Link>
+        </div>
+      </section>
 
       <section className="section" aria-labelledby="step-sepolia">
         <div className="section-head">

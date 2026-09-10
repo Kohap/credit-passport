@@ -17,7 +17,7 @@ Repayment lives on Sepolia; credit decisions live on Creditcoin. Attestcoin is t
 - **Source:** [github.com/Kohap/credit-passport](https://github.com/Kohap/credit-passport)
 - **Local:** `npm run dev:web`
 
-The browser desk prepares the proof through its same-origin proxy. If the external prover is unavailable, the CLI can generate a pasteable `proof.json` with `npm run prove -- <sepoliaTx> --json-out proof.json`.
+The browser desk prepares the proof through a same-origin status route that retries both public provers and keeps completed public proofs warm by transaction hash. If the external prover is unavailable, the CLI can generate a pasteable `proof.json` with `npm run prove -- <sepoliaTx> --json-out proof.json`.
 
 ## Architecture
 

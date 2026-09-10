@@ -72,6 +72,30 @@ const MAX_TX_BYTES = 512_000;
 const MAX_PROOF_NODES = 1_024;
 const proverRequestTimes: number[] = [];
 
+async function fetchHostedProofStatus(txHash: string, onStatus?: (msg: string) => void) {
+  const response = await fetch(`/api/proof-status/${SEPOLIA_CHAIN_KEY}/${txHash}`, {
+    cache: "no-store",
+    headers: { Accept: "application/json" },
+  });
+  const data = (await response.json()) as {
+    status?: string;
+    message?: string;
+    proof?: ProverResponse;
+    sepoliaBlockNumber?: number;
+    attestedHeight?: number;
+  };
+  if (data.status === "ready" && data.proof && typeof data.sepoliaBlockNumber === "number") {
+    return toProofPayload(txHash, data.sepoliaBlockNumber, data.proof);
+  }
+  if (data.status === "error") throw new Error(data.message || "Proof verification failed");
+  if (data.attestedHeight !== undefined) {
+    onStatus?.(`Waiting for attestation: Creditcoin has reached block ${data.attestedHeight}.`);
+  } else if (data.message) {
+    onStatus?.(data.message);
+  }
+  return null;
+}
+
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -324,6 +348,19 @@ export async function buildProof(
     onStatus?.(
       `Waiting for attestation of Sepolia block ${receipt.blockNumber} (can take minutes)…`,
     );
+
+    // Prefer the hosted route: it retries both provers and keeps completed proofs warm.
+    const hostedDeadline = Date.now() + PROVER_TIMEOUT_MS;
+    while (Date.now() < hostedDeadline) {
+      try {
+        const hostedProof = await fetchHostedProofStatus(txHash, onStatus);
+        if (hostedProof) return hostedProof;
+        await sleep(PROVER_POLL_MS);
+      } catch {
+        onStatus?.("Hosted proof status is unavailable; trying the direct prover path…");
+        break;
+      }
+    }
 
     const proverUrls = [
       "/api/prover",

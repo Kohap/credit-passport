@@ -8,6 +8,7 @@ Updated 2026-09-10. This is separate from the working human and Agent Passport d
 - Receipt tests cover asset, emitter, sender, target, status, amount, malformed topics, aToken rejection, replay rejection, and rollback after an invalid receipt.
 - DAI supply is full, so the verified source run used the official LINK reserve instead.
 - The current deployment at `0x2fe50115eE40c4264b643a23102e4cEf88A2AebB` matches the reviewed bytecode and has all three writer roles bound.
+- The four Aave alpha contracts are source-verified on Creditcoin Blockscout with Solidity `0.8.28`, optimizer runs `200`, via-IR, and Shanghai EVM settings.
 - The live proof was submitted at `https://creditcoin-testnet.blockscout.com/tx/0xac4ee54fda4821b896c654298a5e4a37d016c64befed0f3bcf6260fd361095d2`.
 
 ## Scope and limitations

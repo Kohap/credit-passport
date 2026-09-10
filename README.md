@@ -70,6 +70,8 @@ The repository contains a separate Aave V3 Sepolia repayment adapter. It leaves 
 
 The addresses below are the verified deployment of the current source. Historical experiments are not listed here.
 
+All four Aave alpha contracts are source-verified on [Creditcoin Blockscout](https://creditcoin-testnet.blockscout.com/).
+
 | Contract | Network | Address |
 | --- | --- | --- |
 | Aave V3 Pool | Sepolia | [`0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951`](https://sepolia.etherscan.io/address/0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951) |

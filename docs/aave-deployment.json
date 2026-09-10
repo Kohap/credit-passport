@@ -38,6 +38,7 @@
     "reusedRuntime": "CreditScore, CreditLine, PassportNFT match after excluding compiler metadata and checking CreditLine asset immutable",
     "sourceVariableDebtAfterRepayment": "0",
     "allAlphaRolesBoundToAsc": true,
+    "allAlphaContractsSourceVerifiedOnBlockscout": true,
     "liveProof": true,
     "proofHeaderNumber": 11672432
   }

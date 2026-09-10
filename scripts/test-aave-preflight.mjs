@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 
-function run(scenario, checkOnly = true) {
+function run(scenario, checkOnly = true, collateral = "DAI") {
   const root = mkdtempSync(join(tmpdir(), "aave-preflight-"));
   try {
     mkdirSync(join(root, "scripts"));
@@ -18,7 +18,7 @@ const a = process.argv.slice(2), scenario = process.env.SCENARIO;
 const reply = value => { console.log(value); process.exit(0); };
 if (a[0] === "wallet") reply("0x0000000000000000000000000000000000000001");
 if (a[0] === "chain-id") reply(scenario === "wrong-chain" ? "1" : "11155111");
-if (a[0] === "call" && a[2].startsWith("decimals")) reply(scenario === "wrong-decimals" ? "8" : a[1].toLowerCase().startsWith("0xff34") ? "18" : "6");
+if (a[0] === "call" && a[2].startsWith("decimals")) reply(scenario === "wrong-decimals" ? "8" : a[1].toLowerCase().startsWith("0x94a9") ? "6" : "18");
 if (a[0] === "call" && a[2].startsWith("getUserAccountData")) reply(JSON.stringify(["0",scenario === "existing-debt" ? "1" : "0","0","0","0","0"]));
 if (a[0] === "call" && a[2].startsWith("supply")) {
   if (scenario === "full") { console.error("execution reverted: 51"); process.exit(1); }
@@ -33,7 +33,7 @@ if (a[0] === "send") {
 console.error("Unexpected mock command", a[0]); process.exit(1);
 `, { mode: 0o755 });
     const log = join(root, "sends.jsonl");
-    const result = spawnSync("bash", [join(root, "scripts/aave-sepolia-e2e.sh"), ...(checkOnly ? ["--check"] : [])], {
+    const result = spawnSync("bash", [join(root, "scripts/aave-sepolia-e2e.sh"), "--collateral", collateral, ...(checkOnly ? ["--check"] : [])], {
       env: { ...process.env, SCENARIO: scenario, SEND_LOG: log, PATH: `${join(root, "bin")}:${process.env.PATH}` },
       encoding: "utf8", timeout: 15000,
     });
@@ -51,6 +51,15 @@ test("preflight is read-only on success, known funding errors, and failures", ()
     assert.equal(result.status, status, `${scenario}: ${result.stderr}`);
     assert.equal(result.sends.length, 0, scenario);
   }
+});
+
+test("LINK uses the official asset and fixed 10-token collateral amount", () => {
+  const result = run("ready", false, "LINK");
+  assert.equal(result.status, 0, result.stderr);
+  const supply = result.sends.find(a => a[2].startsWith("supply"));
+  assert.equal(supply[3], "0xf8Fb3713D459D7C1018BD0A49D19b4C44290EBE5");
+  assert.equal(supply[4], "10000000000000000000");
+  assert.equal(run("ready", false, "OTHER").sends.length, 0);
 });
 
 test("unknown preflight errors also block write-enabled execution", () => {

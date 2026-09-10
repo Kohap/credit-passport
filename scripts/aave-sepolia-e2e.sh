@@ -1,15 +1,18 @@
 #!/usr/bin/env bash
 # Produce a real Aave V3 Sepolia variable-debt full repayment for the Aave Passport alpha.
-# It mints public test assets, supplies DAI collateral, borrows USDC, then repays with Aave's max sentinel.
-# Usage: bash scripts/aave-sepolia-e2e.sh
+# It mints public test assets, supplies DAI or LINK collateral, borrows USDC, then repays with Aave's max sentinel.
+# Usage: bash scripts/aave-sepolia-e2e.sh [--check] [--collateral DAI|LINK]
 set -euo pipefail
 
 CHECK_ONLY=false
-case "${1:-}" in
-  --check) CHECK_ONLY=true ;;
-  "") ;;
-  *) echo "Usage: bash scripts/aave-sepolia-e2e.sh [--check]" >&2; exit 1 ;;
-esac
+COLLATERAL_SYMBOL=DAI
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --check) CHECK_ONLY=true; shift ;;
+    --collateral) COLLATERAL_SYMBOL="${2:?Specify DAI or LINK}"; shift 2 ;;
+    *) echo "Usage: bash scripts/aave-sepolia-e2e.sh [--check] [--collateral DAI|LINK]" >&2; exit 1 ;;
+  esac
+done
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -35,7 +38,11 @@ AAVE_V3_SEPOLIA_POOL="${AAVE_V3_SEPOLIA_POOL:-0x6Ae43d3271ff6888e7Fc43Fd7321a503
 AAVE_SEPOLIA_FAUCET="${AAVE_SEPOLIA_FAUCET:-0xC959483DBa39aa9E78757139af0e9a2EDEb3f42D}"
 AAVE_SEPOLIA_DAI="${AAVE_SEPOLIA_DAI:-0xFF34B3d4Aee8ddCd6F9AFFFB6Fe49bD371b8a357}"
 AAVE_SEPOLIA_USDC="${AAVE_SEPOLIA_USDC:-0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8}"
-DAI_COLLATERAL=1000000000000000000000
+case "$COLLATERAL_SYMBOL" in
+  DAI) COLLATERAL_ASSET="$AAVE_SEPOLIA_DAI"; COLLATERAL_AMOUNT=1000000000000000000000 ;;
+  LINK) COLLATERAL_ASSET=0xf8Fb3713D459D7C1018BD0A49D19b4C44290EBE5; COLLATERAL_AMOUNT=10000000000000000000 ;;
+  *) echo "Unsupported collateral; choose DAI or LINK." >&2; exit 1 ;;
+esac
 USDC_BORROW=1000000
 USDC_ALLOWANCE=110000000
 MAX_UINT256=0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
@@ -52,7 +59,7 @@ if [[ "$(cast chain-id --rpc-url "$SEPOLIA_RPC_URL")" != 11155111 ]]; then
   echo "ERROR: refusing to transact outside Sepolia." >&2
   exit 1
 fi
-if [[ "$(cast call "$AAVE_SEPOLIA_DAI" 'decimals()(uint8)' --rpc-url "$SEPOLIA_RPC_URL")" != 18 || \
+if [[ "$(cast call "$COLLATERAL_ASSET" 'decimals()(uint8)' --rpc-url "$SEPOLIA_RPC_URL")" != 18 || \
       "$(cast call "$AAVE_SEPOLIA_USDC" 'decimals()(uint8)' --rpc-url "$SEPOLIA_RPC_URL")" != 6 ]]; then
   echo "ERROR: unexpected asset decimals; no transactions sent." >&2
   exit 1
@@ -65,10 +72,10 @@ node -e 'const values=JSON.parse(process.argv[1]); if(BigInt(values[1])!==0n) {c
 echo "==> Aave V3 Sepolia full-repayment run for $ACCOUNT"
 echo "==> Check whether the public pool currently accepts this collateral"
 if ! PREFLIGHT="$(cast call "$AAVE_V3_SEPOLIA_POOL" \
-  "supply(address,uint256,address,uint16)" "$AAVE_SEPOLIA_DAI" "$DAI_COLLATERAL" "$ACCOUNT" 0 \
+  "supply(address,uint256,address,uint16)" "$COLLATERAL_ASSET" "$COLLATERAL_AMOUNT" "$ACCOUNT" 0 \
   --from "$ACCOUNT" --rpc-url "$SEPOLIA_RPC_URL" 2>&1)"; then
   if [[ "$PREFLIGHT" == *'Error("51")'* || "$PREFLIGHT" == *'execution reverted: 51'* ]]; then
-    echo "Aave V3 Sepolia's DAI supply cap is currently full. No source transaction was sent." >&2
+    echo "Aave V3 Sepolia's $COLLATERAL_SYMBOL supply cap is currently full. No source transaction was sent." >&2
     echo "Wait for public pool capacity. Do not rerun with arbitrary token addresses." >&2
     exit 2
   fi
@@ -82,13 +89,13 @@ if [[ "$CHECK_ONLY" == true ]]; then
   echo "Read-only preflight completed. No transactions sent; borrowing has not been simulated."
   exit 0
 fi
-echo "==> Mint test DAI collateral and a small USDC repayment buffer"
-send "$AAVE_SEPOLIA_FAUCET" "mint(address,address,uint256)" "$AAVE_SEPOLIA_DAI" "$ACCOUNT" "$DAI_COLLATERAL"
+echo "==> Mint test $COLLATERAL_SYMBOL collateral and a USDC repayment buffer"
+send "$AAVE_SEPOLIA_FAUCET" "mint(address,address,uint256)" "$COLLATERAL_ASSET" "$ACCOUNT" "$COLLATERAL_AMOUNT"
 send "$AAVE_SEPOLIA_FAUCET" "mint(address,address,uint256)" "$AAVE_SEPOLIA_USDC" "$ACCOUNT" "$USDC_ALLOWANCE"
 
-echo "==> Supply 1,000 DAI collateral and borrow 1 USDC variable debt"
-send "$AAVE_SEPOLIA_DAI" "approve(address,uint256)" "$AAVE_V3_SEPOLIA_POOL" "$DAI_COLLATERAL"
-send "$AAVE_V3_SEPOLIA_POOL" "supply(address,uint256,address,uint16)" "$AAVE_SEPOLIA_DAI" "$DAI_COLLATERAL" "$ACCOUNT" 0
+echo "==> Supply $COLLATERAL_SYMBOL collateral and borrow 1 USDC variable debt"
+send "$COLLATERAL_ASSET" "approve(address,uint256)" "$AAVE_V3_SEPOLIA_POOL" "$COLLATERAL_AMOUNT"
+send "$AAVE_V3_SEPOLIA_POOL" "supply(address,uint256,address,uint16)" "$COLLATERAL_ASSET" "$COLLATERAL_AMOUNT" "$ACCOUNT" 0
 send "$AAVE_V3_SEPOLIA_POOL" "borrow(address,uint256,uint256,uint16,address)" "$AAVE_SEPOLIA_USDC" "$USDC_BORROW" 2 0 "$ACCOUNT"
 send "$AAVE_SEPOLIA_USDC" "approve(address,uint256)" "$AAVE_V3_SEPOLIA_POOL" "$USDC_ALLOWANCE"
 

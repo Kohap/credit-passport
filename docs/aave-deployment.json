@@ -1,0 +1,43 @@
+{
+  "status": "awaiting-live-proof",
+  "date": "2026-09-10",
+  "contractSourceCommit": "890bbeb",
+  "deployer": "0x01e4A64145873c0574c6d77C0d7e07d313B3F2fa",
+  "sepolia": {
+    "chainId": 11155111,
+    "pool": "0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951",
+    "collateral": "0xf8Fb3713D459D7C1018BD0A49D19b4C44290EBE5",
+    "collateralSymbol": "LINK",
+    "collateralAmount": "10000000000000000000",
+    "borrowAsset": "0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8",
+    "borrowAmount": "1000000",
+    "supplyTx": "0x7f5fef1948053d091a30c6cabecc03ce853275b71f307a7becfa48f859d0a932",
+    "borrowTx": "0xf51503fa2d6fdcbf8dea441bf8b2921008dbd1dc1b925f1c1e23d68bf05af469",
+    "repaymentTx": "0xeae5b0bebf5e7048aaedccfe21f6082be3e6b3eb6eed8d56c1bd3f9fa09f4c62",
+    "repaymentBlock": 11672432,
+    "approvalCleanupTx": "0xf367f3e1fc29c3fe1ad1b758042f5b6eeb958f486643dc12be521c162fdbb168",
+    "collateralWithdrawalTx": "0x3d08c26c100b3301525784e2c2af61025ba74e1edeb433a946911dd8ecb948b1"
+  },
+  "creditcoin": {
+    "chainId": 102031,
+    "attestcoinChainKey": 1,
+    "asc": "0x2fe50115eE40c4264b643a23102e4cEf88A2AebB",
+    "score": "0x17d18e6FDd0aE48d15C0655D9Eb5f60C90DC07e8",
+    "line": "0x54e96e15261057a007D5a9613A5EAD1551194f58",
+    "nft": "0xb0d2ab6f79c9aC220FbbDd299f71E9e7711c2B4f",
+    "demoAsset": "0x3937cFf0385AF9aAA25212432f030Ddbb1B98798",
+    "deploymentTx": "0x532e8417091adb57b913a508b6c763b8f9ebf9c123b248aafe6a4688b242c35b",
+    "writerTx": "0xb750d2068442d13ac581638474d6483a38952b52e9ead2aecfc9561d86aecfe9",
+    "updaterTx": "0x93a8c9e43068607a66d765a03c0b144e93cc634a012d36faae735c480c3b6bd1",
+    "minterTx": "0x784d6ed5c9683ef487fb344cf7b05dce9f87c46d2e313754ccec1914f8cc7183",
+    "fundingTx": "0x4b0e42403d541555633903069f3becdb1f576b79dcb4c719d7f9e9403bc55e3c",
+    "proofTx": null
+  },
+  "verification": {
+    "ascRuntime": "exact match after checking constructor immutable values",
+    "reusedRuntime": "CreditScore, CreditLine, PassportNFT match after excluding compiler metadata and checking CreditLine asset immutable",
+    "sourceVariableDebtAfterRepayment": "0",
+    "allAlphaRolesBoundToAsc": true,
+    "liveProof": false
+  }
+}

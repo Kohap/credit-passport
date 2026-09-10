@@ -64,6 +64,22 @@ Agent Passport is a separate live testnet alpha: client-funded Sepolia job escro
 
 Its trust model, verification procedure, and known Sybil/dispute limitations are documented in [`docs/AGENT_PASSPORT.md`](docs/AGENT_PASSPORT.md).
 
+## Aave repayment alpha
+
+The repository contains a separate, **not yet end-to-end verified** Aave V3 Sepolia repayment adapter. It leaves the live MockMarket v2 and Agent Passport demos unchanged. The current source requires Attestcoin proof of a successful, direct `repay(asset, type(uint256).max, 2, borrower)` transaction and a matching Pool `Repay` event. These current-source checks must not be described as live protections. See [alpha status and release gates](docs/AAVE_ALPHA.md).
+
+The addresses below are historical experiments, not the approved deployment of the current source. Do not configure them as the current alpha verifier.
+
+| Contract | Network | Address |
+| --- | --- | --- |
+| Aave V3 Pool | Sepolia | [`0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951`](https://sepolia.etherscan.io/address/0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951) |
+| Aave repayment ASC | Creditcoin CC3 | [`0xCC83b2d0b052DEc64Ddb80915eC408b933b7B29f`](https://creditcoin-testnet.blockscout.com/address/0xCC83b2d0b052DEc64Ddb80915eC408b933b7B29f) |
+| Aave alpha CreditScore | Creditcoin CC3 | [`0x3E66613643DaB431BB1cED436DB94828A15189b8`](https://creditcoin-testnet.blockscout.com/address/0x3E66613643DaB431BB1cED436DB94828A15189b8) |
+| Aave alpha CreditLine | Creditcoin CC3 | [`0xB659a98E1c6dBf4bf921eBF0a7f9e062d049F3f3`](https://creditcoin-testnet.blockscout.com/address/0xB659a98E1c6dBf4bf921eBF0a7f9e062d049F3f3) |
+| Aave alpha PassportNFT | Creditcoin CC3 | [`0xcEb5184F907775EB1bced75e81F4cd9f29022f12`](https://creditcoin-testnet.blockscout.com/address/0xcEb5184F907775EB1bced75e81F4cd9f29022f12) |
+
+Start with `bash scripts/aave-sepolia-e2e.sh --check` (read-only). On 2026-09-10, a direct DAI supply simulation still returned Aave error `51` (`SUPPLY_CAP_EXCEEDED`); no external Aave proof is claimed. After resolving capacity and verifying a deployment of the current revision, the write-enabled script can create a source repayment, then `npm run prove -- <AAVE_REPAY_TX> --aave --submit --claim <same wallet>` can submit it. This adapter covers one reserve's variable debt, not every position or production underwriting.
+
 ## Deployed addresses
 
 Demo deployer: [`0x01e4A64145873c0574c6d77C0d7e07d313B3F2fa`](https://creditcoin-testnet.blockscout.com/address/0x01e4A64145873c0574c6d77C0d7e07d313B3F2fa)

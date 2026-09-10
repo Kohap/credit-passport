@@ -45,6 +45,7 @@ const envSchema = z.object({
     emptyToUndef,
     address40.default(AGENT_ASC_DEFAULT),
   ),
+  CREDITCOIN_AAVE_PASSPORT_ASC: z.preprocess(emptyToUndef, address40.optional()),
   CREDITCOIN_PRIVATE_KEY: z.preprocess(emptyToUndef, privateKey.optional()),
 });
 

@@ -316,6 +316,12 @@ textarea:focus-visible {
   flex-wrap: wrap;
 }
 
+.alpha-flow-note {
+  margin-top: 0.75rem;
+  color: var(--ink) !important;
+  font-size: 0.86rem;
+}
+
 .section p {
   color: var(--mute);
   margin: 0 0 1rem;

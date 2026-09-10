@@ -47,6 +47,86 @@ export const mockUsdAbi = [
   },
 ] as const;
 
+export const aaveFaucetAbi = [
+  {
+    type: "function",
+    name: "mint",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "token", type: "address" },
+      { name: "to", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [],
+  },
+] as const;
+
+export const aavePoolAbi = [
+  {
+    type: "function",
+    name: "supply",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "asset", type: "address" },
+      { name: "amount", type: "uint256" },
+      { name: "onBehalfOf", type: "address" },
+      { name: "referralCode", type: "uint16" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "borrow",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "asset", type: "address" },
+      { name: "amount", type: "uint256" },
+      { name: "interestRateMode", type: "uint256" },
+      { name: "referralCode", type: "uint16" },
+      { name: "onBehalfOf", type: "address" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "repay",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "asset", type: "address" },
+      { name: "amount", type: "uint256" },
+      { name: "interestRateMode", type: "uint256" },
+      { name: "onBehalfOf", type: "address" },
+    ],
+    outputs: [{ name: "amount", type: "uint256" }],
+  },
+] as const;
+
+export const aavePassportAscAbi = [
+  {
+    type: "function",
+    name: "proveAaveRepayment",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "chainKey", type: "uint64" },
+      { name: "blockHeight", type: "uint64" },
+      { name: "encodedTransaction", type: "bytes" },
+      { name: "merkleRoot", type: "bytes32" },
+      {
+        name: "siblings",
+        type: "tuple[]",
+        components: [
+          { name: "hash", type: "bytes32" },
+          { name: "isLeft", type: "bool" },
+        ],
+      },
+      { name: "lowerEndpointDigest", type: "bytes32" },
+      { name: "continuityRoots", type: "bytes32[]" },
+      { name: "claimBorrower", type: "address" },
+    ],
+    outputs: [{ type: "bool" }],
+  },
+] as const;
+
 export const mockMarketAbi = [
   {
     type: "function",

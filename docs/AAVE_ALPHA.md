@@ -23,6 +23,10 @@ This proves a historical action, not creditworthiness, identity, income, or abse
 2. DAI supply capacity is currently full; LINK was used for the verified run.
 3. The adapter covers one reserve's variable debt and does not assess identity, income, or other debt.
 
+## Browser flow
+
+The Desk now supports the complete testnet sequence from the connected wallet: receive public LINK and USDC test assets, supply LINK, borrow 1 USDC variable debt, repay with Aave's full-close sentinel, wait for the hosted Attestcoin proof, and submit `proveAaveRepayment` on Creditcoin. The CLI remains an optional recovery and reproducibility path, not the primary judge flow.
+
 ## Local checks
 
 ```bash

@@ -73,6 +73,10 @@ export const PROOF_BUILDER_URL_FALLBACK = publicHttpsUrl(
 
 /** Verified Aave V3 Sepolia repayment source and CC3 alpha deployment. */
 export const aaveAlpha = {
+  faucet: publicAddress(
+    process.env.NEXT_PUBLIC_AAVE_SEPOLIA_FAUCET,
+    "0xC959483DBa39aa9E78757139af0e9a2EDEb3f42D",
+  ),
   pool: publicAddress(
     process.env.NEXT_PUBLIC_AAVE_SEPOLIA_POOL,
     "0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951",

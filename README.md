@@ -80,7 +80,7 @@ All four Aave alpha contracts are source-verified on [Creditcoin Blockscout](htt
 | Aave alpha CreditLine | Creditcoin CC3 | [`0x54e96e15261057a007D5a9613A5EAD1551194f58`](https://creditcoin-testnet.blockscout.com/address/0x54e96e15261057a007D5a9613A5EAD1551194f58) |
 | Aave alpha PassportNFT | Creditcoin CC3 | [`0xb0d2ab6f79c9aC220FbbDd299f71E9e7711c2B4f`](https://creditcoin-testnet.blockscout.com/address/0xb0d2ab6f79c9aC220FbbDd299f71E9e7711c2B4f) |
 
-Start with `bash scripts/aave-sepolia-e2e.sh --check --collateral LINK` (read-only). The write-enabled script can create a source repayment, then `npm run prove -- <AAVE_REPAY_TX> --aave --submit --claim <same wallet>` can submit it. This adapter covers one reserve's variable debt, not every position or production underwriting.
+The Desk supports this sequence directly in the connected wallet: test assets → supply LINK → borrow 1 USDC → repay → hosted proof → Creditcoin verification. Start with `bash scripts/aave-sepolia-e2e.sh --check --collateral LINK` (read-only) when reproducing locally. The CLI remains an optional recovery path. This adapter covers one reserve's variable debt, not every position or production underwriting.
 
 ## Deployed addresses
 

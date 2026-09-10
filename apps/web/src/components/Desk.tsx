@@ -28,6 +28,9 @@ import {
 import {
   creditLineAbi,
   creditScoreAbi,
+  aaveFaucetAbi,
+  aavePassportAscAbi,
+  aavePoolAbi,
   mockMarketAbi,
   mockUsdAbi,
   passportAscAbi,
@@ -58,6 +61,11 @@ type ActiveLoan = {
 
 const MAX_UINT256 = (1n << 256n) - 1n;
 const DEMO_BORROW_AMOUNT = parseEther("10");
+const AAVE_LINK_AMOUNT = parseEther("10");
+const AAVE_USDC_BORROW = 1_000_000n;
+const AAVE_USDC_ALLOWANCE = 110_000_000n;
+
+type AaveStep = "idle" | "funded" | "supplied" | "borrowed" | "repaid" | "proof_ready" | "verified";
 
 const sepoliaWalletChain: WalletChain = {
   id: SEPOLIA_CHAIN_ID,
@@ -179,6 +187,10 @@ export function Desk() {
       setCreditTx(undefined);
       setBorrowTx(undefined);
       setProof(null);
+      setAaveStep("idle");
+      setAaveRepayTx(undefined);
+      setAaveProof(null);
+      setAaveCreditTx(undefined);
       setVerified(null);
       setPhase("idle");
       setStatus(
@@ -225,6 +237,11 @@ export function Desk() {
   const [openLoanBusy, setOpenLoanBusy] = useState(false);
   const [repayBusy, setRepayBusy] = useState(false);
   const [borrowBusy, setBorrowBusy] = useState(false);
+  const [aaveBusy, setAaveBusy] = useState(false);
+  const [aaveStep, setAaveStep] = useState<AaveStep>("idle");
+  const [aaveRepayTx, setAaveRepayTx] = useState<Hex | undefined>();
+  const [aaveProof, setAaveProof] = useState<ProofPayload | null>(null);
+  const [aaveCreditTx, setAaveCreditTx] = useState<Hex | undefined>();
   const [repayAll, setRepayAll] = useState(false);
   const [activeLoans, setActiveLoans] = useState<ActiveLoan[]>([]);
   const [activeLoansBusy, setActiveLoansBusy] = useState(false);
@@ -665,6 +682,205 @@ export function Desk() {
     }
   }
 
+  async function waitForSepolia(hash: Hex, label: string) {
+    if (!sepoliaClient) throw new Error("Sepolia RPC unavailable.");
+    setStatus(`Waiting for ${label} confirmation on Sepolia…`);
+    const receipt = await sepoliaClient.waitForTransactionReceipt({ hash, timeout: 120_000 });
+    if (receipt.status === "reverted") throw new Error(`${label} reverted on Sepolia.`);
+  }
+
+  async function fundAaveAssets() {
+    if (!address || !sepoliaClient) throw new Error("Connect the same wallet on Sepolia first.");
+    const request = await selectedWalletRequest();
+    setAaveBusy(true);
+    try {
+      setStatus("Confirm LINK test assets in your wallet…");
+      const linkHash = await sendPopulatedWrite({
+        publicClient: sepoliaClient,
+        account: address,
+        address: aaveAlpha.faucet as Address,
+        abi: aaveFaucetAbi,
+        functionName: "mint",
+        functionArgs: [aaveAlpha.link, address, AAVE_LINK_AMOUNT],
+        chain: sepoliaWalletChain,
+        request,
+      });
+      await waitForSepolia(linkHash, "LINK test assets");
+      setStatus("Confirm USDC test assets in your wallet…");
+      const usdcHash = await sendPopulatedWrite({
+        publicClient: sepoliaClient,
+        account: address,
+        address: aaveAlpha.faucet as Address,
+        abi: aaveFaucetAbi,
+        functionName: "mint",
+        functionArgs: [aaveAlpha.usdc, address, AAVE_USDC_ALLOWANCE],
+        chain: sepoliaWalletChain,
+        request,
+      });
+      await waitForSepolia(usdcHash, "USDC test assets");
+      setAaveStep("funded");
+      setStatus("Aave test assets received. Supply LINK next.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : String(error));
+    } finally {
+      setAaveBusy(false);
+    }
+  }
+
+  async function supplyAaveLink() {
+    if (!address || !sepoliaClient) throw new Error("Connect the same wallet on Sepolia first.");
+    const request = await selectedWalletRequest();
+    setAaveBusy(true);
+    try {
+      setStatus("Approve LINK for the Aave Pool…");
+      const approvalHash = await sendPopulatedWrite({
+        publicClient: sepoliaClient,
+        account: address,
+        address: aaveAlpha.link as Address,
+        abi: mockUsdAbi,
+        functionName: "approve",
+        functionArgs: [aaveAlpha.pool, AAVE_LINK_AMOUNT],
+        chain: sepoliaWalletChain,
+        request,
+      });
+      await waitForSepolia(approvalHash, "LINK approval");
+      setStatus("Confirm LINK supply in your wallet…");
+      const supplyHash = await sendPopulatedWrite({
+        publicClient: sepoliaClient,
+        account: address,
+        address: aaveAlpha.pool as Address,
+        abi: aavePoolAbi,
+        functionName: "supply",
+        functionArgs: [aaveAlpha.link, AAVE_LINK_AMOUNT, address, 0],
+        chain: sepoliaWalletChain,
+        request,
+      });
+      await waitForSepolia(supplyHash, "LINK supply");
+      setAaveStep("supplied");
+      setStatus("LINK supplied. Borrow 1 USDC variable debt next.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : String(error));
+    } finally {
+      setAaveBusy(false);
+    }
+  }
+
+  async function borrowAaveUsdc() {
+    if (!address || !sepoliaClient) throw new Error("Connect the same wallet on Sepolia first.");
+    setAaveBusy(true);
+    try {
+      setStatus("Confirm the 1 USDC variable borrow in your wallet…");
+      const hash = await sendPopulatedWrite({
+        publicClient: sepoliaClient,
+        account: address,
+        address: aaveAlpha.pool as Address,
+        abi: aavePoolAbi,
+        functionName: "borrow",
+        functionArgs: [aaveAlpha.usdc, AAVE_USDC_BORROW, 2, 0, address],
+        chain: sepoliaWalletChain,
+        request: await selectedWalletRequest(),
+      });
+      await waitForSepolia(hash, "USDC borrow");
+      setAaveStep("borrowed");
+      setStatus("USDC borrowed. Repay the variable debt to create the proof.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : String(error));
+    } finally {
+      setAaveBusy(false);
+    }
+  }
+
+  async function repayAaveUsdc() {
+    if (!address || !sepoliaClient) throw new Error("Connect the same wallet on Sepolia first.");
+    const request = await selectedWalletRequest();
+    setAaveBusy(true);
+    try {
+      const balance = await sepoliaClient.readContract({
+        address: aaveAlpha.usdc as Address,
+        abi: mockUsdAbi,
+        functionName: "balanceOf",
+        args: [address],
+      });
+      if (balance < AAVE_USDC_BORROW) throw new Error("The wallet does not have enough USDC to repay this Aave test loan.");
+      const allowance = await sepoliaClient.readContract({
+        address: aaveAlpha.usdc as Address,
+        abi: mockUsdAbi,
+        functionName: "allowance",
+        args: [address, aaveAlpha.pool as Address],
+      });
+      if (allowance < AAVE_USDC_BORROW) {
+        setStatus("Approve USDC for the Aave Pool…");
+        const approvalHash = await sendPopulatedWrite({
+          publicClient: sepoliaClient,
+          account: address,
+          address: aaveAlpha.usdc as Address,
+          abi: mockUsdAbi,
+          functionName: "approve",
+          functionArgs: [aaveAlpha.pool, AAVE_USDC_ALLOWANCE],
+          chain: sepoliaWalletChain,
+          request,
+        });
+        await waitForSepolia(approvalHash, "USDC approval");
+      }
+      setStatus("Confirm full USDC repayment in your wallet…");
+      const hash = await sendPopulatedWrite({
+        publicClient: sepoliaClient,
+        account: address,
+        address: aaveAlpha.pool as Address,
+        abi: aavePoolAbi,
+        functionName: "repay",
+        functionArgs: [aaveAlpha.usdc, MAX_UINT256, 2, address],
+        chain: sepoliaWalletChain,
+        request,
+      });
+      await waitForSepolia(hash, "Aave repayment");
+      setAaveRepayTx(hash);
+      setAaveProof(null);
+      setAaveStep("repaid");
+      setStatus("Repayment confirmed. Preparing the Aave proof automatically…");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : String(error));
+    } finally {
+      setAaveBusy(false);
+    }
+  }
+
+  async function submitAaveProof(payload: ProofPayload) {
+    if (!address || !creditcoinClient) throw new Error("Connect the same wallet on Creditcoin first.");
+    setAaveBusy(true);
+    try {
+      setStatus("Confirm Aave repayment proof on Creditcoin in your wallet…");
+      const hash = await sendPopulatedWrite({
+        publicClient: creditcoinClient,
+        account: address,
+        address: aaveAlpha.passportAsc as Address,
+        abi: aavePassportAscAbi,
+        functionName: "proveAaveRepayment",
+        functionArgs: [
+          BigInt(payload.chainKey),
+          BigInt(payload.headerNumber),
+          payload.txBytes,
+          payload.merkleRoot,
+          payload.siblings,
+          payload.lowerEndpointDigest,
+          payload.continuityRoots,
+          address,
+        ],
+        chain: creditcoinWalletChain,
+        request: await selectedWalletRequest(),
+      });
+      setAaveCreditTx(hash);
+      const receipt = await creditcoinClient.waitForTransactionReceipt({ hash, timeout: 120_000 });
+      if (receipt.status === "reverted") throw new Error("Aave proof reverted on Creditcoin.");
+      setAaveStep("verified");
+      setStatus(`Aave repayment verified on Creditcoin. Tx ${hash}`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : String(error));
+    } finally {
+      setAaveBusy(false);
+    }
+  }
+
   async function submitProveRepayment(payload: ProofPayload) {
     setPhase("submitting");
     setStatus("Submit proveRepayment on Creditcoin (same wallet)…");
@@ -782,6 +998,26 @@ export function Desk() {
       cancelled = true;
     };
   }, [proof?.sepoliaTxHash, repayTx, updateProofProgress]);
+
+  useEffect(() => {
+    if (!aaveRepayTx || aaveProof?.sepoliaTxHash.toLowerCase() === aaveRepayTx.toLowerCase()) return;
+    let cancelled = false;
+    setAaveStep("repaid");
+    void buildProof(aaveRepayTx, updateProofProgress)
+      .then((payload) => {
+        if (cancelled) return;
+        setAaveProof(payload);
+        setAaveStep("proof_ready");
+        setStatus("Aave proof ready. Confirm the Creditcoin transaction to finish.");
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        setStatus(error instanceof Error ? error.message : String(error));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [aaveProof?.sepoliaTxHash, aaveRepayTx, updateProofProgress]);
 
   async function proveOnCreditcoin() {
     if (!repayTx) {
@@ -1046,7 +1282,22 @@ export function Desk() {
             <span className="alpha-detail">Same wallet, verified receipt</span>
           </div>
         </div>
-        <div className="actions alpha-actions">
+        <div className="actions alpha-actions" aria-label="Aave repayment steps">
+          <button type="button" className="btn btn-primary" disabled={!isConnected || aaveBusy} onClick={() => void fundAaveAssets()}>
+            {aaveStep === "idle" ? "Get Aave test assets" : "Assets received"}
+          </button>
+          <button type="button" className="btn btn-ghost" disabled={!isConnected || aaveBusy || aaveStep !== "funded"} onClick={() => void supplyAaveLink()}>
+            {aaveStep === "supplied" || aaveStep === "borrowed" || aaveStep === "repaid" || aaveStep === "proof_ready" || aaveStep === "verified" ? "LINK supplied" : "Supply LINK"}
+          </button>
+          <button type="button" className="btn btn-ghost" disabled={!isConnected || aaveBusy || aaveStep !== "supplied"} onClick={() => void borrowAaveUsdc()}>
+            {aaveStep === "borrowed" || aaveStep === "repaid" || aaveStep === "proof_ready" || aaveStep === "verified" ? "USDC borrowed" : "Borrow 1 USDC"}
+          </button>
+          <button type="button" className="btn btn-ghost" disabled={!isConnected || aaveBusy || aaveStep !== "borrowed"} onClick={() => void repayAaveUsdc()}>
+            {aaveStep === "repaid" || aaveStep === "proof_ready" || aaveStep === "verified" ? "Repayment sent" : "Repay USDC"}
+          </button>
+          <button type="button" className="btn btn-ghost" disabled={!isConnected || aaveBusy || !aaveProof || aaveStep !== "proof_ready"} onClick={() => aaveProof && void submitAaveProof(aaveProof)}>
+            {aaveStep === "verified" ? "Aave proof verified" : aaveProof ? "Verify Aave repayment" : "Waiting for proof"}
+          </button>
           <a className="btn btn-ghost" href={`${SEPOLIA_EXPLORER}/tx/${aaveAlpha.sourceTx}`} target="_blank" rel="noreferrer">
             View Aave repayment
           </a>
@@ -1057,6 +1308,17 @@ export function Desk() {
             Read how it works
           </Link>
         </div>
+        <p className="alpha-flow-note" role="status" aria-live="polite">
+          {aaveStep === "idle" ? "Use the public Sepolia faucet to start. Every step stays in your wallet." :
+            aaveStep === "funded" ? "Assets ready. Supply LINK to Aave." :
+              aaveStep === "supplied" ? "Collateral supplied. Borrow 1 USDC." :
+                aaveStep === "borrowed" ? "Debt opened. Repay it to create the proof." :
+                  aaveStep === "repaid" ? "Repayment confirmed. Waiting for Attestcoin." :
+                    aaveStep === "proof_ready" ? "Proof ready. Submit it on Creditcoin." :
+                      "Aave repayment verified on Creditcoin."}
+        </p>
+        {aaveRepayTx ? <p className="tx-line mono">Aave repayment: <a href={`${SEPOLIA_EXPLORER}/tx/${aaveRepayTx}`} target="_blank" rel="noreferrer">{aaveRepayTx}</a></p> : null}
+        {aaveCreditTx ? <p className="tx-line mono">Aave Creditcoin proof: <a href={`${CREDITCOIN_EXPLORER}/tx/${aaveCreditTx}`} target="_blank" rel="noreferrer">{aaveCreditTx}</a></p> : null}
       </section>
 
       <section className="section" aria-labelledby="step-sepolia">
